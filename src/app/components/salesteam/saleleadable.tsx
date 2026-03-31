@@ -8,9 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
-import SalesEditLeadForm from "./saleseditform";
+import SalesEditLeadForm from "../salesteam/salesEditLeadForm";
 import { Eye, Edit, Trash2, UserPlus } from "lucide-react";
 import type { LeadRecord } from "../../../types/types";
 import axios from "axios";
@@ -18,6 +19,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/app/redux/store";
 import { fetchLeads } from "@/app/features/lead/leadSlice";
 import Pagination from "../ui/pagination";
+import LeadDetailsModel from "../DetailModel/LeadModel/leadTabledetailsmodel";
 import {
   BannerColumn,
   TABLE_BANNER_COLUMNS,
@@ -31,7 +33,7 @@ import {
   LEAD_CUSTOMER_TYPES,
   LEAD_SERVICE_TYPES,
   LEAD_TRIP_TYPES,
-} from "../../../types/leads/leadstabledata";
+} from "../../../types/LeadsTable/leadstabledata";
 
 const CITY_OPTIONS = [
   "Delhi",
@@ -152,6 +154,8 @@ export default function LeadsTable() {
   const [paxDropdownStyle, setPaxDropdownStyle] = useState<React.CSSProperties>(
     {},
   );
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
   const [daysDropdownStyle, setDaysDropdownStyle] =
     useState<React.CSSProperties>({});
 
@@ -301,17 +305,15 @@ export default function LeadsTable() {
                 className="p-1 text-white transition-colors bg-green-600 rounded hover:bg-green-700"
                 title="Add Rate Quotation"
               >
-                <span className="text-xs font-medium">💰 Rate</span>
+                <span className="text-xs font-medium">💰</span>
               </button>
 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Dispatching viewLead for lead:", lead.id);
+                  console.log("Opening modal for lead:", lead.id);
                   setDetailLead(lead);
-                  window.dispatchEvent(
-                    new CustomEvent("viewLead", { detail: lead }),
-                  );
+                  setIsDetailModalOpen(true);
                 }}
                 className="p-1 text-white transition-colors bg-blue-600 rounded hover:bg-blue-700"
                 title="View"
@@ -867,7 +869,7 @@ export default function LeadsTable() {
               const headerBgClass = groupLabel
                 ? (BANNER_GROUP_BG_CLASS[groupLabel] ?? "bg-slate-900")
                 : "bg-slate-900";
-              const headerTextClass = "text-white"; 
+              const headerTextClass = "text-white";
 
               const headerClassName = `sticky top-[30px] border border-white ${headerBgClass} px-1  text-left text-[11px] font-bold uppercase tracking-wide ${headerTextClass} sm:text-xs z-20 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1)]`;
 
@@ -1001,7 +1003,7 @@ export default function LeadsTable() {
       ? ((vehnLeads / totalLeadsCount) * 100).toFixed(1)
       : "0.0";
 
-  if (detailLead) {
+  if (detailLead && isEditMode) {
     console.log(
       "detailLead is set, rendering SalesEditLeadForm",
       detailLead.id,
@@ -1010,7 +1012,7 @@ export default function LeadsTable() {
       <div className="w-full">
         <SalesEditLeadForm
           initialData={detailLead}
-          isEditMode={isEditMode} // Pass the edit mode to the form
+          isEditMode={isEditMode}
           onSuccess={() => {
             console.log("SalesEditLeadForm success callback");
             setDetailLead(null);
@@ -1026,366 +1028,391 @@ export default function LeadsTable() {
       </div>
     );
   }
+
   return (
-    <div className="w-full overflow-auto">
-      {/* Stats Header */}
-      <div className="p-3 bg-orange-100 rounded-md">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className=" border-l-8 border-orange-500 bg-white px-3">
-            <h2 className="text-2xl md:text-4xl font-bold text-left text-orange-600">
-              Sales Lead Table
-            </h2>
-            <p className="mt-1 text-sm text-left text-orange-700">
-              Leads Details & Status.
-            </p>
-          </div>
+    <>
+      <div className="w-full overflow-auto">
+        {/* Stats Header */}
+        <div className="p-3 bg-orange-100 rounded-md">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className=" border-l-8 border-orange-500 bg-white px-3">
+              <h2 className="text-2xl md:text-4xl font-bold text-left text-orange-600">
+                Sales Lead Table
+              </h2>
+              <p className="mt-1 text-sm text-left text-orange-700">
+                Leads Details & Status.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-2 w-full md:w-auto  items-center mr-28">
-            {/** Each box uses same class for uniform size */}
-            <div className="flex flex-col items-center justify-center bg-black px-2 py-2 mr-6 rounded-lg shadow-md border border-white min-w-[80px] h-20">
-              <div className="font-extrabold text-sm text-white">
-                Total Leads
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2 w-full md:w-auto  items-center mr-28">
+              {/** Each box uses same class for uniform size */}
+              <div className="flex flex-col items-center justify-center bg-black px-2 py-2 mr-6 rounded-lg shadow-md border border-white min-w-[80px] h-20">
+                <div className="font-extrabold text-sm text-white">
+                  Total Leads
+                </div>
+                <div className="text-lg font-extrabold text-white">
+                  {totalLeadsCount}
+                </div>
+                <div className="text-md text-white">({totalPercentage}%)</div>
               </div>
-              <div className="text-lg font-extrabold text-white">
-                {totalLeadsCount}
+
+              <div className="flex flex-col items-center justify-center bg-blue-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-sky-800 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-black">NEW</div>
+                <div className="text-lg font-extrabold text-black">
+                  {newLeads}
+                </div>
+                <div className="text-md text-black">{newPercentage}%</div>
               </div>
-              <div className="text-md text-white">({totalPercentage}%)</div>
-            </div>
 
-            <div className="flex flex-col items-center justify-center bg-blue-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-sky-800 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-black">NEW</div>
-              <div className="text-lg font-extrabold text-black">
-                {newLeads}
+              <div className="flex flex-col items-center justify-center bg-blue-300 px-2 py-2 mr-6 rounded-lg shadow-md border border-blue-800 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-blue-950">RFQ</div>
+                <div className="font-extrabold text-blue-900">{rfqLeads}</div>
+                <div className="text-md text-blue-700">{rfqPercentage}%</div>
               </div>
-              <div className="text-md text-black">{newPercentage}%</div>
-            </div>
 
-            <div className="flex flex-col items-center justify-center bg-blue-300 px-2 py-2 mr-6 rounded-lg shadow-md border border-blue-800 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-blue-950">RFQ</div>
-              <div className="font-extrabold text-blue-900">{rfqLeads}</div>
-              <div className="text-md text-blue-700">{rfqPercentage}%</div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-orange-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-orange-800 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-orange-950">KYC</div>
-              <div className="font-extrabold text-orange-900">{kycLeads}</div>
-              <div className="text-md text-orange-700">{kycPercentage}%</div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-purple-200 px-2 py-2 mr-6 rounded-lg shadow-md border border-purple-800 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-purple-950">HOT</div>
-              <div className="font-extrabold text-purple-900">{hotLeads}</div>
-              <div className="text-md text-purple-700">{hotPercentage}%</div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-pink-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-pink-900 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-pink-950">VEH-N</div>
-              <div className="font-extrabold text-pink-900">{vehnLeads}</div>
-              <div className="text-md text-pink-700">{vehnPercentage}%</div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-red-500 px-2 py-2 mr-6 rounded-lg shadow-md border border-red-600 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-white">LOST</div>
-              <div className="font-extrabold text-white">{lostLeads}</div>
-              <div className="text-md text-white">{lostPercentage}%</div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-green-800 px-2 py-2 rounded-lg shadow-md border border-green-800 min-w-[80px] h-20">
-              <div className="font-extrabold text-xl text-white"> BOOK</div>
-              <div className="text-lg font-extrabold text-white">
-                {bookLeads}
+              <div className="flex flex-col items-center justify-center bg-orange-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-orange-800 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-orange-950">
+                  KYC
+                </div>
+                <div className="font-extrabold text-orange-900">{kycLeads}</div>
+                <div className="text-md text-orange-700">{kycPercentage}%</div>
               </div>
-              <div className="text-md text-white">({totalPercentage}%)</div>
+
+              <div className="flex flex-col items-center justify-center bg-purple-200 px-2 py-2 mr-6 rounded-lg shadow-md border border-purple-800 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-purple-950">
+                  HOT
+                </div>
+                <div className="font-extrabold text-purple-900">{hotLeads}</div>
+                <div className="text-md text-purple-700">{hotPercentage}%</div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center bg-pink-200 px-2 py-2 ml-6 rounded-lg shadow-md border border-pink-900 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-pink-950">
+                  VEH-N
+                </div>
+                <div className="font-extrabold text-pink-900">{vehnLeads}</div>
+                <div className="text-md text-pink-700">{vehnPercentage}%</div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center bg-red-500 px-2 py-2 mr-6 rounded-lg shadow-md border border-red-600 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-white">LOST</div>
+                <div className="font-extrabold text-white">{lostLeads}</div>
+                <div className="text-md text-white">{lostPercentage}%</div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center bg-green-800 px-2 py-2 rounded-lg shadow-md border border-green-800 min-w-[80px] h-20">
+                <div className="font-extrabold text-xl text-white"> BOOK</div>
+                <div className="text-lg font-extrabold text-white">
+                  {bookLeads}
+                </div>
+                <div className="text-md text-white">({totalPercentage}%)</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Sticky Filter Section */}
-      <div className="sticky md:top-28 z-3 bg-white shadow-sm rounded-2xl ">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="flex flex-col gap-1">
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search"
-              className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as typeof statusFilter)
-              }
-              className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="All">All Statuses</option>
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Sticky Filter Section */}
+        <div className="sticky md:top-28 z-3 bg-white shadow-sm rounded-2xl ">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="flex flex-col gap-1">
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search"
+                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as typeof statusFilter)
+                }
+                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="All">All Statuses</option>
+                {statusOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <select
-              value={cityFilter}
-              onChange={(event) =>
-                setCityFilter(event.target.value as typeof cityFilter)
-              }
-              className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="All">All City</option>
-              {cityOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-1">
+              <select
+                value={cityFilter}
+                onChange={(event) =>
+                  setCityFilter(event.target.value as typeof cityFilter)
+                }
+                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="All">All City</option>
+                {cityOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="relative flex flex-col gap-1">
-            <button
-              ref={paxBtnRef}
-              onClick={togglePax}
-              className="w-full px-3 h-9 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 text-left flex justify-between items-center bg-white"
-            >
-              {selectedPax.length > 0
-                ? `${selectedPax.length} Pax Selected`
-                : "Select Pax"}
-              <span>▾</span>
-            </button>
-            {paxOpen &&
-              typeof document !== "undefined" &&
-              createPortal(
-                <div
-                  ref={paxDropdownRef}
-                  className="absolute z-[9999] bg-white border rounded-lg shadow max-h-60 overflow-y-auto"
-                  style={paxDropdownStyle}
-                >
-                  <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer">
-                    <button
-                      onClick={() => setSelectedPax([])}
-                      className="text-sm text-red-600 font-semibold hover:underline"
-                    >
-                      Clear All
-                    </button>
-                  </label>
-                  {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
-                    <label
-                      key={num}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPax.includes(num)}
-                        onChange={() =>
-                          setSelectedPax((prev) =>
-                            prev.includes(num)
-                              ? prev.filter((v) => v !== num)
-                              : [...prev, num],
-                          )
-                        }
-                      />
-                      <span className="text-sm text-black">{num} Pax</span>
-                    </label>
-                  ))}
-                </div>,
-                document.body,
-              )}
-          </div>
-
-          <div className="relative flex flex-col gap-1">
-            <button
-              ref={daysBtnRef}
-              onClick={toggleDays}
-              className="w-full px-3 h-9 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 text-left flex justify-between items-center bg-white"
-            >
-              {selectedDays.length > 0
-                ? `${selectedDays.length} Days Selected`
-                : "Select Days"}
-              <span>▾</span>
-            </button>
-            {daysOpen &&
-              typeof document !== "undefined" &&
-              createPortal(
-                <div
-                  ref={daysDropdownRef}
-                  className="absolute z-[9999] bg-white border rounded-lg shadow max-h-60 overflow-y-auto"
-                  style={daysDropdownStyle}
-                >
-                  <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer">
-                    <button
-                      onClick={() => setSelectedDays([])}
-                      className="text-sm text-red-600 font-semibold hover:underline"
-                    >
-                      Clear All
-                    </button>
-                  </label>
-                  {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
-                    <label
-                      key={num}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedDays.includes(num)}
-                        onChange={() =>
-                          setSelectedDays((prev) =>
-                            prev.includes(num)
-                              ? prev.filter((v) => v !== num)
-                              : [...prev, num],
-                          )
-                        }
-                      />
-                      <span className="text-sm text-black">{num} Days</span>
-                    </label>
-                  ))}
-                </div>,
-                document.body,
-              )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <select
-              value={freezeKey ?? "none"}
-              onChange={(event) =>
-                setFreezeKey(
-                  event.target.value === "none" ? null : event.target.value,
-                )
-              }
-              className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="none">Freeze Columns</option>
-              {columns.map((column) => (
-                <option key={column.key} value={column.key}>
-                  {column.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Month Selection and Date Range Section */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 lg:col-span-6 mt-2">
-            <div className="flex gap-1 overflow-x-auto pb-2">
-              {MONTH_OPTIONS.map((month) => {
-                const currentMonth = new Date().getMonth() + 1;
-
-                const isCurrentMonth = Number(month.value) === currentMonth;
-                const isActive = selectedMonth === month.value;
-
-                return (
-                  <button
-                    key={month.value}
-                    type="button"
-                    onClick={() =>
-                      setSelectedMonth(isActive ? null : month.value)
-                    }
-                    className={`text-md font-extrabold rounded-lg transition-all shadow-sm min-w-[50px] h-9 ${
-                      isCurrentMonth
-                        ? "bg-blue-600 text-white ring-2 ring-blue-400" // 🔵 current month
-                        : isActive
-                          ? "bg-green-600 text-white"
-                          : "bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200"
-                    }`}
+            <div className="relative flex flex-col gap-1">
+              <button
+                ref={paxBtnRef}
+                onClick={togglePax}
+                className="w-full px-3 h-9 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 text-left flex justify-between items-center bg-white"
+              >
+                {selectedPax.length > 0
+                  ? `${selectedPax.length} Pax Selected`
+                  : "Select Pax"}
+                <span>▾</span>
+              </button>
+              {paxOpen &&
+                typeof document !== "undefined" &&
+                createPortal(
+                  <div
+                    ref={paxDropdownRef}
+                    className="absolute z-[9999] bg-white border rounded-lg shadow max-h-60 overflow-y-auto"
+                    style={paxDropdownStyle}
                   >
-                    {month.label}
-                  </button>
-                );
-              })}
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer">
+                      <button
+                        onClick={() => setSelectedPax([])}
+                        className="text-sm text-red-600 font-semibold hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </label>
+                    {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
+                      <label
+                        key={num}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPax.includes(num)}
+                          onChange={() =>
+                            setSelectedPax((prev) =>
+                              prev.includes(num)
+                                ? prev.filter((v) => v !== num)
+                                : [...prev, num],
+                            )
+                          }
+                        />
+                        <span className="text-sm text-black">{num} Pax</span>
+                      </label>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
             </div>
 
-            <div className="flex gap-4 w-full md:w-auto">
-              <input
-                type={startType}
-                value={startMonth}
-                onChange={(event) => setStartMonth(event.target.value)}
-                placeholder="Start Date"
-                onFocus={(e) => {
-                  const target = e.currentTarget;
-                  setStartType("date");
-                  setTimeout(() => {
-                    try {
-                      target.showPicker();
-                    } catch (err) {}
-                  }, 0);
-                }}
-                onClick={(e) => {
-                  const target = e.currentTarget;
-                  setStartType("date");
-                  setTimeout(() => {
-                    try {
-                      target.showPicker();
-                    } catch (err) {}
-                  }, 0);
-                }}
-                onBlur={() => {
-                  if (!startMonth) setStartType("text");
-                }}
-                className="px-3 h-9 text-md font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white flex-1"
-              />
-              <input
-                type={endType}
-                value={endMonth}
-                min={startMonth}
-                onChange={(event) => setEndMonth(event.target.value)}
-                placeholder="End Date"
-                onFocus={(e) => {
-                  const target = e.currentTarget;
-                  setEndType("date");
-                  setTimeout(() => {
-                    try {
-                      target.showPicker();
-                    } catch (err) {}
-                  }, 0);
-                }}
-                onClick={(e) => {
-                  const target = e.currentTarget;
-                  setEndType("date");
-                  setTimeout(() => {
-                    try {
-                      target.showPicker();
-                    } catch (err) {}
-                  }, 0);
-                }}
-                onBlur={() => {
-                  if (!endMonth) setEndType("text");
-                }}
-                className="px-3 h-9 text-md font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white flex-1"
-              />
+            <div className="relative flex flex-col gap-1">
+              <button
+                ref={daysBtnRef}
+                onClick={toggleDays}
+                className="w-full px-3 h-9 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 text-left flex justify-between items-center bg-white"
+              >
+                {selectedDays.length > 0
+                  ? `${selectedDays.length} Days Selected`
+                  : "Select Days"}
+                <span>▾</span>
+              </button>
+              {daysOpen &&
+                typeof document !== "undefined" &&
+                createPortal(
+                  <div
+                    ref={daysDropdownRef}
+                    className="absolute z-[9999] bg-white border rounded-lg shadow max-h-60 overflow-y-auto"
+                    style={daysDropdownStyle}
+                  >
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer">
+                      <button
+                        onClick={() => setSelectedDays([])}
+                        className="text-sm text-red-600 font-semibold hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </label>
+                    {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
+                      <label
+                        key={num}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDays.includes(num)}
+                          onChange={() =>
+                            setSelectedDays((prev) =>
+                              prev.includes(num)
+                                ? prev.filter((v) => v !== num)
+                                : [...prev, num],
+                            )
+                          }
+                        />
+                        <span className="text-sm text-black">{num} Days</span>
+                      </label>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Table Section */}
-      <div className="mt-2 bg-white border shadow-sm rounded-3xl border-white w-full">
-        <div className="relative border border-white rounded-2xl overflow-hidden h-[64vh]">
-          <div className="absolute inset-0 flex overflow-x-auto overflow-y-auto">
-            {/* Left Frozen Section */}
-            {frozenColumns.length > 0 && (
-              <div className="sticky left-0 z-30 h-full bg-white flex flex-col shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] border-r border-white">
-                {renderTableSection(frozenColumns, leftBannerGroups, true)}
+            <div className="flex flex-col gap-1">
+              <select
+                value={freezeKey ?? "none"}
+                onChange={(event) =>
+                  setFreezeKey(
+                    event.target.value === "none" ? null : event.target.value,
+                  )
+                }
+                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="none">Freeze Columns</option>
+                {columns.map((column) => (
+                  <option key={column.key} value={column.key}>
+                    {column.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Month Selection and Date Range Section */}
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 lg:col-span-6 mt-2">
+              <div className="flex gap-1 overflow-x-auto pb-2">
+                {MONTH_OPTIONS.map((month) => {
+                  const currentMonth = new Date().getMonth() + 1;
+
+                  const isCurrentMonth = Number(month.value) === currentMonth;
+                  const isActive = selectedMonth === month.value;
+
+                  return (
+                    <button
+                      key={month.value}
+                      type="button"
+                      onClick={() =>
+                        setSelectedMonth(isActive ? null : month.value)
+                      }
+                      className={`text-md font-extrabold rounded-lg transition-all shadow-sm min-w-[50px] h-9 ${
+                        isCurrentMonth
+                          ? "bg-blue-600 text-white ring-2 ring-blue-400"
+                          : isActive
+                            ? "bg-green-600 text-white"
+                            : "bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200"
+                      }`}
+                    >
+                      {month.label}
+                    </button>
+                  );
+                })}
               </div>
-            )}
 
-            {/* Right Scrollable Section */}
-            <div className="flex-1 min-w-0 bg-white">
-              {renderTableSection(scrollableColumns, rightBannerGroups, false)}
+              <div className="flex gap-4 w-full md:w-auto">
+                <input
+                  type={startType}
+                  value={startMonth}
+                  onChange={(event) => setStartMonth(event.target.value)}
+                  placeholder="Start Date"
+                  onFocus={(e) => {
+                    const target = e.currentTarget;
+                    setStartType("date");
+                    setTimeout(() => {
+                      try {
+                        target.showPicker();
+                      } catch (err) {}
+                    }, 0);
+                  }}
+                  onClick={(e) => {
+                    const target = e.currentTarget;
+                    setStartType("date");
+                    setTimeout(() => {
+                      try {
+                        target.showPicker();
+                      } catch (err) {}
+                    }, 0);
+                  }}
+                  onBlur={() => {
+                    if (!startMonth) setStartType("text");
+                  }}
+                  className="px-3 h-9 text-md font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white flex-1"
+                />
+                <input
+                  type={endType}
+                  value={endMonth}
+                  min={startMonth}
+                  onChange={(event) => setEndMonth(event.target.value)}
+                  placeholder="End Date"
+                  onFocus={(e) => {
+                    const target = e.currentTarget;
+                    setEndType("date");
+                    setTimeout(() => {
+                      try {
+                        target.showPicker();
+                      } catch (err) {}
+                    }, 0);
+                  }}
+                  onClick={(e) => {
+                    const target = e.currentTarget;
+                    setEndType("date");
+                    setTimeout(() => {
+                      try {
+                        target.showPicker();
+                      } catch (err) {}
+                    }, 0);
+                  }}
+                  onBlur={() => {
+                    if (!endMonth) setEndType("text");
+                  }}
+                  className="px-3 h-9 text-md font-semibold border rounded-lg shadow-sm border-slate-300 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Use the Pagination component */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages || 1}
-          totalItems={totalLeadsCount}
-          rowsPerPage={rowsPerPage}
-          onPageChange={handlePageChange}
-        />
+        {/* Table Section */}
+        <div className="mt-2 bg-white border shadow-sm rounded-3xl border-white w-full">
+          <div className="relative border border-white rounded-2xl overflow-hidden h-[64vh]">
+            <div className="absolute inset-0 flex overflow-x-auto overflow-y-auto">
+              {/* Left Frozen Section */}
+              {frozenColumns.length > 0 && (
+                <div className="sticky left-0 z-30 h-full bg-white flex flex-col shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] border-r border-white">
+                  {renderTableSection(frozenColumns, leftBannerGroups, true)}
+                </div>
+              )}
+
+              {/* Right Scrollable Section */}
+              <div className="flex-1 min-w-0 bg-white">
+                {renderTableSection(
+                  scrollableColumns,
+                  rightBannerGroups,
+                  false,
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Use the Pagination component */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages || 1}
+            totalItems={totalLeadsCount}
+            rowsPerPage={rowsPerPage}
+            onPageChange={handlePageChange}
+          />
+        </div>
       </div>
-    </div>
+
+      {/* Lead Details Modal */}
+      {isDetailModalOpen && detailLead && (
+        <LeadDetailsModel
+          lead={detailLead}
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setTimeout(() => setDetailLead(null), 300);
+          }}
+        />
+      )}
+    </>
   );
 }

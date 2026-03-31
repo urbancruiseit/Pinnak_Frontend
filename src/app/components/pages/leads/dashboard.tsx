@@ -110,7 +110,7 @@ export default function LeadsDashboard() {
   }
 
   if (error) {
-    return <div className="p-6 text-red-500">Error: {error}</div>;
+    return <div className="p-6 text-red-500"> {error}</div>;
   }
 
   return (

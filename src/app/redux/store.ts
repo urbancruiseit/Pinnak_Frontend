@@ -5,12 +5,11 @@ import countryReducer from "../features/countrycode/countrycodeSlice";
 import vehicleReducer from "../features/vehicle/vehicleSlice";
 import travelcityReducer from "../features/travelcity/travelcitySlice";
 import customerReducer from "../features/Customer/customerSlice";
-import stateCityReducer  from "../features/State/stateSlice";
-
+import stateCityReducer from "../features/State/stateSlice";
+import assignReducer from "../features/access/accessSlice";
 import reportReducer from "../features/reports/reportsSlice";
 import annualReportReducer from "../features/AnnualReport/annualreportSlice";
 import HoursReportReducer from "../features/HoursReport/hoursreportsSlice";
-import { userApi } from "../features/user/userApi";
 
 export const store = configureStore({
   reducer: {
@@ -20,14 +19,12 @@ export const store = configureStore({
     vehicle: vehicleReducer,
     travelcity: travelcityReducer,
     customer: customerReducer,
-    stateCity: stateCityReducer ,
+    stateCity: stateCityReducer,
     report: reportReducer,
     annualReport: annualReportReducer,
     hoursReport: HoursReportReducer,
-    [userApi.reducerPath]: userApi.reducer,
+    assign: assignReducer, // ✅ assign slice added successfully
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(userApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

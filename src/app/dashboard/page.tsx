@@ -239,17 +239,7 @@ const masterTabs: MasterTab[] = [
       },
     ),
   },
-  {
-    key: "hr",
-    label: "HR Master",
-    component: dynamic(
-      () => import("../components/masterform.tsx/HRformdata"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
-  },
+
   {
     key: "city",
     label: "City Master",
@@ -440,6 +430,23 @@ export default function DashboardPage() {
     window.addEventListener("viewLead", handleViewLead as EventListener);
     return () => {
       window.removeEventListener("viewLead", handleViewLead as EventListener);
+    };
+  }, []);
+
+  // Listen for navigateToLeadTable event from LeadsForm
+  useEffect(() => {
+    const handleNavigateToLeadTable = () => {
+      setActiveSection("leads");
+      setActiveLeadView("lead-table");
+      resetAllReportStates();
+    };
+
+    window.addEventListener("navigateToLeadTable", handleNavigateToLeadTable);
+    return () => {
+      window.removeEventListener(
+        "navigateToLeadTable",
+        handleNavigateToLeadTable,
+      );
     };
   }, []);
 

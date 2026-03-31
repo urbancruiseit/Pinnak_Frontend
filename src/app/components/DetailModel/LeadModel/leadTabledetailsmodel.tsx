@@ -27,43 +27,6 @@ interface LeadDetailsModelProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-interface SectionProps {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}
-
-const DetailSection = ({
-  title,
-  icon,
-  children,
-  defaultOpen = true,
-}: SectionProps) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-blue-600">{icon}</span>
-          <h3 className="font-semibold text-gray-800">{title}</h3>
-        </div>
-        {isOpen ? (
-          <ChevronUp size={18} className="text-gray-500" />
-        ) : (
-          <ChevronDown size={18} className="text-gray-500" />
-        )}
-      </button>
-      {isOpen && <div className="p-4">{children}</div>}
-    </div>
-  );
-};
-
 const DetailRow = ({
   label,
   value,
@@ -73,35 +36,35 @@ const DetailRow = ({
   value: string | number | null;
   icon?: React.ReactNode;
 }) => (
-  <div className="flex flex-col space-y-1 p-3 bg-gray-50 rounded-lg">
-    <div className="flex items-center gap-2 text-sm text-gray-500">
-      {icon && <span className="text-gray-400">{icon}</span>}
+  <div className="flex flex-col space-y-1">
+    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+      {icon && <span className="text-gray-400 w-3.5 h-3.5">{icon}</span>}
       <span>{label}</span>
     </div>
-    <div className="font-medium text-gray-900 break-words">
-      {value || <span className="text-gray-400 italic">Not specified</span>}
+    <div className="text-sm text-gray-900 break-words">
+      {value || <span className="text-gray-400">—</span>}
     </div>
   </div>
 );
 
 const StatusBadge = ({ status }: { status: string }) => {
   const statusConfig: Record<string, { color: string; bgColor: string }> = {
-    New: { color: "text-blue-800", bgColor: "bg-blue-100" },
-    KYC: { color: "text-amber-800", bgColor: "bg-amber-100" },
-    RFQ: { color: "text-red-800", bgColor: "bg-red-100" },
-    HOT: { color: "text-pink-800", bgColor: "bg-pink-100" },
-    Book: { color: "text-green-800", bgColor: "bg-green-100" },
-    Lost: { color: "text-gray-800", bgColor: "bg-gray-100" },
+    New: { color: "text-blue-700", bgColor: "bg-blue-50" },
+    KYC: { color: "text-amber-700", bgColor: "bg-amber-50" },
+    RFQ: { color: "text-red-700", bgColor: "bg-red-50" },
+    HOT: { color: "text-pink-700", bgColor: "bg-pink-50" },
+    Book: { color: "text-green-700", bgColor: "bg-green-50" },
+    Lost: { color: "text-gray-700", bgColor: "bg-gray-50" },
   };
 
   const config = statusConfig[status] || {
-    color: "text-gray-800",
-    bgColor: "bg-gray-100",
+    color: "text-gray-700",
+    bgColor: "bg-gray-50",
   };
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-sm font-medium ${config.bgColor} ${config.color}`}
+      className={`px-2.5 py-1 rounded-md text-xs font-medium ${config.bgColor} ${config.color}`}
     >
       {status || "N/A"}
     </span>
@@ -109,9 +72,6 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const LeadDetailsModel = ({ lead, isOpen, onClose }: LeadDetailsModelProps) => {
-  const [imageError, setImageError] = useState<Record<string, boolean>>({});
-
-  // Close on escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -153,341 +113,352 @@ const LeadDetailsModel = ({ lead, isOpen, onClose }: LeadDetailsModelProps) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-7xl max-h-[90vh] overflow-y-auto bg-gray-100 rounded-xl shadow-2xl animate-in fade-in zoom-in duration-300">
+      <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-100 rounded-2xl shadow-xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-6 bg-gradient-to-r from-blue-700 to-blue-900 rounded-t-xl shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <Briefcase className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Lead Details</h2>
-              <div className="flex items-center gap-4 text-sm text-blue-200">
-                <p>Reference ID: {lead.id || "N/A"}</p>
-                <p>City: {lead.city || "N/A"}</p>
-                <p>
-                  Lead Date:{" "}
-                  {lead.enquiryTime
-                    ? new Date(lead.enquiryTime)
-                        .toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                        .replace(",", "")
-                    : "N/A"}
-                </p>
-              </div>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-5 bg-white border-b border-gray-200 rounded-t-2xl">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Lead Details
+            </h2>
+            <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+              <p>ID: {lead.id || "—"}</p>
+              <p>City: {lead.city || "—"}</p>
+              <p>
+                Date:{" "}
+                {lead.enquiryTime
+                  ? new Date(lead.enquiryTime).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "—"}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-white transition-all rounded-lg hover:bg-white/20 hover:scale-110"
+            className="p-2 text-gray-400 transition-colors rounded-lg hover:bg-gray-100 hover:text-gray-600"
             aria-label="Close modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-white p-3 rounded-lg shadow-sm border-l-4 border-blue-500">
-              <div className="text-xs text-gray-500">Status</div>
+          {/* Quick Info Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="text-xs text-gray-500 mb-1">Status</div>
               <StatusBadge status={lead.status} />
             </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm border-l-4 border-green-500">
-              <div className="text-xs text-gray-500">Source</div>
-              <div className="font-medium flex items-center gap-1 mt-1">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="text-xs text-gray-500 mb-1">Source</div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
                 <Tag size={14} className="text-gray-400" />
-                {lead.source || "N/A"}
+                {lead.source || "—"}
               </div>
             </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm border-l-4 border-purple-500">
-              <div className="text-xs text-gray-500">Telecaller</div>
-              <div className="font-medium flex items-center gap-1 mt-1">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="text-xs text-gray-500 mb-1">Telecaller</div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
                 <PhoneCall size={14} className="text-gray-400" />
-                {lead.telecaller || "N/A"}
+                {lead.telecaller || "—"}
               </div>
             </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm border-l-4 border-amber-500">
-              <div className="text-xs text-gray-500">Follow Up</div>
-              <div className="font-medium flex items-center gap-1 mt-1">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="text-xs text-gray-500 mb-1">Follow Up</div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
                 <Clock size={14} className="text-gray-400" />
-                {lead.followup || "N/A"}
+                {lead.followup || "—"}
               </div>
             </div>
           </div>
 
-          <DetailSection title="Customer Information" icon={<User size={18} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
-              <DetailRow
-                label="Full Name"
-                value={lead.customerName}
-                icon={<User size={14} />}
-              />
-              <DetailRow
-                label="Phone Number"
-                value={lead.customerPhone}
-                icon={<Phone size={14} />}
-              />
-              <DetailRow
-                label="Alternate Phone"
-                value={lead.alternatePhone}
-                icon={<Phone size={14} />}
-              />
-              <DetailRow
-                label="Customer Category"
-                value={lead.customerType}
-                icon={<Building2 size={14} />}
-              />
-              <DetailRow
-                label="Customer Type"
-                value={lead.customerCategoryType}
-                icon={<Building2 size={14} />}
-              />
-              <DetailRow
-                label="Company"
-                value={lead.companyName}
-                icon={<Building2 size={14} />}
-              />
-              <DetailRow
-                label="Email Address"
-                value={lead.customerEmail}
-                icon={<Mail size={14} />}
-              />
-
-              <DetailRow
-                label="Country"
-                value={lead.countryName}
-                icon={<Flag size={14} />}
-              />
-              <DetailRow
-                label="Customer City"
-                value={lead.customerCity}
-                icon={<Flag size={14} />}
-              />
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Travel Details" icon={<MapPin size={18} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              <DetailRow label="Trip Type" value={lead.tripType} />
-              <DetailRow label="Service Type" value={lead.serviceType} />
-              <DetailRow
-                label="Pickup Date & Time"
-                value={formatDateTime(lead.pickupDateTime)}
-                icon={<Calendar size={14} />}
-              />
-              <DetailRow
-                label="Drop Date & Time"
-                value={formatDateTime(lead.dropDateTime)}
-                icon={<Calendar size={14} />}
-              />
-              <DetailRow
-                label="Pickup City"
-                value={lead.pickupcity}
-                icon={<MapPin size={14} />}
-              />
-              <DetailRow
-                label="Drop City"
-                value={lead.dropcity}
-                icon={<MapPin size={14} />}
-              />
-              <DetailRow label="Duration (Days)" value={lead.days} />
-              <DetailRow label="Distance (KM)" value={lead.km} />
-
-              <div className="md:col-span-2">
-                <DetailRow label="Pickup Address" value={lead.pickupAddress} />
-              </div>
-
-              <div className="md:col-span-2">
-                <DetailRow label="Drop Address" value={lead.dropAddress} />
+          {/* Customer Information - Blue theme */}
+          <div className="rounded-xl border border-blue-200 overflow-hidden">
+            <div className="px-5 py-4 bg-blue-50 border-b border-blue-200">
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-blue-600" />
+                <h3 className="font-medium text-gray-900">
+                  Customer Information
+                </h3>
               </div>
             </div>
-          </DetailSection>
+            <div className="p-5 bg-blue-50/30">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+                <DetailRow
+                  label="Full Name"
+                  value={lead.customerName}
+                  icon={<User size={12} />}
+                />
+                <DetailRow
+                  label="Phone Number"
+                  value={lead.customerPhone}
+                  icon={<Phone size={12} />}
+                />
+                <DetailRow
+                  label="Alternate Phone"
+                  value={lead.alternatePhone}
+                  icon={<Phone size={12} />}
+                />
+                <DetailRow
+                  label="Customer Category"
+                  value={lead.customerType}
+                  icon={<Building2 size={12} />}
+                />
+                <DetailRow
+                  label="Customer Type"
+                  value={lead.customerCategoryType}
+                  icon={<Building2 size={12} />}
+                />
+                <DetailRow
+                  label="Company"
+                  value={lead.companyName}
+                  icon={<Building2 size={12} />}
+                />
+                <DetailRow
+                  label="Email Address"
+                  value={lead.customerEmail}
+                  icon={<Mail size={12} />}
+                />
+                <DetailRow
+                  label="Country"
+                  value={lead.countryName}
+                  icon={<Flag size={12} />}
+                />
+                <DetailRow
+                  label="Customer City"
+                  value={lead.customerCity}
+                  icon={<MapPin size={12} />}
+                />
+              </div>
+            </div>
+          </div>
 
-          <DetailSection
-            title="Passenger & Baggage Details"
-            icon={<Users size={18} />}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <Users size={16} /> Passenger Information
-                </h4>
-                <div className="space-y-2">
+          {/* Travel Details - Pink theme */}
+          <div className="rounded-xl border border-pink-200 overflow-hidden">
+            <div className="px-5 py-4 bg-pink-50 border-b border-pink-200">
+              <div className="flex items-center gap-2">
+                <MapPin size={18} className="text-pink-500" />
+                <h3 className="font-medium text-gray-900">Travel Details</h3>
+              </div>
+            </div>
+            <div className="p-5 bg-pink-50/30">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                <DetailRow label="Trip Type" value={lead.tripType} />
+                <DetailRow label="Service Type" value={lead.serviceType} />
+                <DetailRow
+                  label="Pickup Date & Time"
+                  value={formatDateTime(lead.pickupDateTime)}
+                  icon={<Calendar size={12} />}
+                />
+                <DetailRow
+                  label="Drop Date & Time"
+                  value={formatDateTime(lead.dropDateTime)}
+                  icon={<Calendar size={12} />}
+                />
+                <DetailRow
+                  label="Pickup City"
+                  value={lead.pickupcity}
+                  icon={<MapPin size={12} />}
+                />
+                <DetailRow
+                  label="Drop City"
+                  value={lead.dropcity}
+                  icon={<MapPin size={12} />}
+                />
+                <DetailRow label="Duration (Days)" value={lead.days} />
+                <DetailRow label="Distance (KM)" value={lead.km} />
+                <div className="col-span-2">
                   <DetailRow
-                    label="Total Passengers"
-                    value={lead.passengerTotal}
+                    label="Pickup Address"
+                    value={lead.pickupAddress}
                   />
-                  {lead.petsNumber && (
-                    <DetailRow
-                      label="Pets"
-                      value={`${lead.petsNumber} ${lead.petsNames ? `(${lead.petsNames})` : ""}`}
-                    />
-                  )}
                 </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <Package size={16} /> Baggage Details
-                </h4>
-                <div className="space-y-2">
-                  <DetailRow label="Total Baggage" value={lead.totalBaggage} />
-                  {(lead.smallBaggage ||
-                    lead.mediumBaggage ||
-                    lead.largeBaggage ||
-                    lead.airportBaggage) && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {lead.smallBaggage && (
-                        <div className="text-sm">
-                          Small: {lead.smallBaggage}
-                        </div>
-                      )}
-                      {lead.mediumBaggage && (
-                        <div className="text-sm">
-                          Medium: {lead.mediumBaggage}
-                        </div>
-                      )}
-                      {lead.largeBaggage && (
-                        <div className="text-sm">
-                          Large: {lead.largeBaggage}
-                        </div>
-                      )}
-                      {lead.airportBaggage && (
-                        <div className="text-sm">
-                          Airport: {lead.airportBaggage}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="col-span-2">
+                  <DetailRow label="Drop Address" value={lead.dropAddress} />
                 </div>
               </div>
             </div>
-          </DetailSection>
+          </div>
 
-          <DetailSection title="Vehicle Requirements" icon={<Car size={18} />}>
-            <div className="space-y-3">
-              {
-                lead.vehicles &&
-                Array.isArray(lead.vehicles) &&
-                lead.vehicles.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {lead.vehicles.map((vehicle: any, index: number) => (
-                      <div
-                        key={index}
-                        className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-blue-700">
-                            {vehicle.quantity}x
-                          </span>
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                            {vehicle.category}
-                          </span>
-                        </div>
-                        <p className="text-gray-700 mt-1">{vehicle.type}</p>
-                      </div>
-                    ))}
+          {/* Passenger & Baggage Details - Green theme */}
+          <div className="rounded-xl border border-green-200 overflow-hidden">
+            <div className="px-5 py-4 bg-green-50 border-b border-green-200">
+              <div className="flex items-center gap-2">
+                <Users size={18} className="text-green-600" />
+                <h3 className="font-medium text-gray-900">
+                  Passenger & Baggage Details
+                </h3>
+              </div>
+            </div>
+            <div className="p-5 bg-green-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <Users size={14} /> Passenger Information
+                  </h4>
+                  <div className="space-y-3">
+                    <DetailRow
+                      label="Total Passengers"
+                      value={lead.passengerTotal}
+                    />
+                    {lead.petsNumber && (
+                      <DetailRow
+                        label="Pets"
+                        value={`${lead.petsNumber} ${lead.petsNames ? `(${lead.petsNames})` : ""}`}
+                      />
+                    )}
                   </div>
-                ) : null 
-              }
-
-              {(lead.vehicle2 || lead.vehicle3 || lead.requirementVehicle) && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-                  {lead.vehicles && (
-                    <DetailRow
-                      label="Additional Vehicle 1"
-                      value={lead.vehicles}
-                    />
-                  )}
-                  {lead.vehicle2 && (
-                    <DetailRow
-                      label="Additional Vehicle 2"
-                      value={lead.vehicle2}
-                    />
-                  )}
-                  {lead.vehicle3 && (
-                    <DetailRow
-                      label="Additional Vehicle 3"
-                      value={lead.vehicle3}
-                    />
-                  )}
-                  {lead.requirementVehicle && (
-                    <DetailRow
-                      label="Special Requirements"
-                      value={lead.requirementVehicle}
-                    />
-                  )}
                 </div>
-              )}
-
-              {(!lead.vehicles ||
-                (Array.isArray(lead.vehicles) && lead.vehicles.length === 0)) &&
-                !lead.vehicle2 &&
-                !lead.vehicle3 &&
-                !lead.requirementVehicle && (
-                  <p className="text-gray-500 italic">No vehicles specified</p>
-                )}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <Package size={14} /> Baggage Details
+                  </h4>
+                  <div className="space-y-3">
+                    <DetailRow
+                      label="Total Baggage"
+                      value={lead.totalBaggage}
+                    />
+                    {(lead.smallBaggage ||
+                      lead.mediumBaggage ||
+                      lead.largeBaggage ||
+                      lead.airportBaggage) && (
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        {lead.smallBaggage && (
+                          <span className="text-xs bg-white px-2 py-1 rounded border border-green-200">
+                            Small: {lead.smallBaggage}
+                          </span>
+                        )}
+                        {lead.mediumBaggage && (
+                          <span className="text-xs bg-white px-2 py-1 rounded border border-green-200">
+                            Medium: {lead.mediumBaggage}
+                          </span>
+                        )}
+                        {lead.largeBaggage && (
+                          <span className="text-xs bg-white px-2 py-1 rounded border border-green-200">
+                            Large: {lead.largeBaggage}
+                          </span>
+                        )}
+                        {lead.airportBaggage && (
+                          <span className="text-xs bg-white px-2 py-1 rounded border border-green-200">
+                            Airport: {lead.airportBaggage}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </DetailSection>
+          </div>
 
-          {lead.itinerary &&
-            Array.isArray(lead.itinerary) &&
-            lead.itinerary.length > 0 && (
-              <DetailSection
-                title="Trip Itinerary"
-                icon={<FileText size={18} />}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
-                  {lead.itinerary.map((item: string, index: number) => (
+          {/* Vehicle Requirements - Purple theme */}
+          <div className="rounded-xl border border-purple-200 overflow-hidden">
+            <div className="px-5 py-4 bg-purple-50 border-b border-purple-200">
+              <div className="flex items-center gap-2">
+                <Car size={18} className="text-purple-600" />
+                <h3 className="font-medium text-gray-900">
+                  Vehicle Requirements
+                </h3>
+              </div>
+            </div>
+            <div className="p-5 bg-purple-50/30">
+              {lead.vehicles &&
+              Array.isArray(lead.vehicles) &&
+              lead.vehicles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {lead.vehicles.map((vehicle: any, index: number) => (
                     <div
                       key={index}
-                      className="flex items-start gap-2 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200"
                     >
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
-                        {index + 1}
-                      </div>
-                      <p className="text-gray-700 flex-1">{item}</p>
+                      <span className="font-medium text-gray-900">
+                        {vehicle.type}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {vehicle.quantity}x
+                      </span>
                     </div>
                   ))}
                 </div>
-              </DetailSection>
-            )}
-
-          <DetailSection
-            title="Additional Information"
-            icon={<AlertCircle size={18} />}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <DetailRow
-                label="Occasion"
-                value={lead.occasion}
-                icon={<Star size={14} />}
-              />
-              <DetailRow label="Remarks" value={lead.remarks} />
-              {lead.lost_reason && (
-                <>
-                  <DetailRow label="Lost Reason" value={lead.lost_reason} />
-                  <DetailRow label="Lost Reason Details" value={lead.message} />
-                </>
+              ) : (
+                <p className="text-sm text-gray-400">No vehicles specified</p>
               )}
             </div>
-          </DetailSection>
+          </div>
+
+          {/* Trip Itinerary - Yellow/Orange theme */}
+          {lead.itinerary &&
+            Array.isArray(lead.itinerary) &&
+            lead.itinerary.length > 0 && (
+              <div className="rounded-xl border border-amber-200 overflow-hidden">
+                <div className="px-5 py-4 bg-amber-50 border-b border-amber-200">
+                  <div className="flex items-center gap-2">
+                    <FileText size={18} className="text-amber-600" />
+                    <h3 className="font-medium text-gray-900">
+                      Trip Itinerary
+                    </h3>
+                  </div>
+                </div>
+                <div className="p-5 bg-amber-50/30">
+                  <div className="space-y-2">
+                    {lead.itinerary.map((item: string, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-medium">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm text-gray-700 flex-1">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+          {/* Additional Information - Gray theme */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={18} className="text-gray-500" />
+                <h3 className="font-medium text-gray-900">
+                  Additional Information
+                </h3>
+              </div>
+            </div>
+            <div className="p-5 bg-gray-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <DetailRow
+                  label="Occasion"
+                  value={lead.occasion}
+                  icon={<Star size={12} />}
+                />
+                <DetailRow label="Remarks" value={lead.remarks} />
+                {lead.lost_reason && (
+                  <>
+                    <DetailRow label="Lost Reason" value={lead.lost_reason} />
+                    <DetailRow
+                      label="Lost Reason Details"
+                      value={lead.message}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex justify-end p-4 bg-white border-t border-gray-200 shadow-lg">
+        <div className="sticky bottom-0 flex justify-end p-4 bg-white border-t border-gray-200">
           <button
             onClick={onClose}
-            className="px-8 py-2.5 text-white transition-all bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-md active:scale-95 font-medium"
+            className="px-6 py-2 text-sm text-gray-600 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
           >
             Close
           </button>

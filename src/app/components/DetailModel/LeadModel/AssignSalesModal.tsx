@@ -1,61 +1,104 @@
-import React, { useState } from "react";
+// components/AssignSalesModal.tsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { TypedUseSelectorHook } from "react-redux";
+import type { RootState, AppDispatch } from "@/app/redux/store";
 import {
-  useGetSalesUsersQuery,
-  useAssignToUsersMutation,
-} from "../../../features/user/userApi";
-import { User } from "../../../../types/types"; // adjust path
+  fetchSalesUsers,
+  assignLeadToUser,
+  setSelectedUser,
+  clearSelectedUser,
+  clearAssignError,
+  resetAssignState,
+} from "../../../features/access/accessSlice";
+import type { User } from "@/types/types";
+
+const useAppDispatch = () => useDispatch<AppDispatch>();
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 interface AssignSalesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  entityId: string;
-  entityType?: string;
+  leadId: string; // Single lead ID
 }
 
 const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
   isOpen,
   onClose,
-  entityId,
+  leadId,
 }) => {
-  const { data: salesUsers, isLoading, error } = useGetSalesUsersQuery();
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [assignToUsers, { isLoading: isAssigning }] =
-    useAssignToUsersMutation();
+  const dispatch = useAppDispatch();
 
-  const handleCheckboxChange = (userId: string, checked: boolean) => {
-    setSelectedUserIds((prev) =>
-      checked ? [...prev, userId] : prev.filter((id) => id !== userId),
-    );
-  };
+  const {
+    salesUsers,
+    loading,
+    error,
+    assignLoading,
+    assignError,
+    selectedUserId,
+  } = useAppSelector((state) => state.assign);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked && salesUsers) {
-      setSelectedUserIds(salesUsers.map((u) => u.uuid));
-    } else {
-      setSelectedUserIds([]);
+  const [localSelectedUserId, setLocalSelectedUserId] = useState<string>("");
+
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(fetchSalesUsers());
+      setLocalSelectedUserId("");
+      dispatch(clearSelectedUser());
     }
+
+    return () => {
+      if (!isOpen) {
+        dispatch(clearAssignError());
+        dispatch(clearSelectedUser());
+      }
+    };
+  }, [isOpen, dispatch]);
+
+  useEffect(() => {
+    if (selectedUserId) {
+      setLocalSelectedUserId(selectedUserId);
+    }
+  }, [selectedUserId]);
+
+  const handleRadioChange = (userId: string) => {
+    setLocalSelectedUserId(userId);
+    dispatch(setSelectedUser(userId));
   };
 
   const handleSubmit = async () => {
+    if (!localSelectedUserId) {
+      alert("Please select a sales user");
+      return;
+    }
+
     try {
-      await assignToUsers({ entityId, userIds: selectedUserIds }).unwrap();
-      alert("Assigned successfully!");
+      await dispatch(
+        assignLeadToUser({
+          leadId: leadId,
+          userId: localSelectedUserId,
+        })
+      ).unwrap();
+
+      alert("Lead assigned successfully!");
       onClose();
+      dispatch(resetAssignState());
     } catch (err) {
       console.error("Assignment failed", err);
-      alert("Assignment failed");
+      alert(assignError || "Assignment failed");
     }
   };
 
   if (!isOpen) return null;
 
-  // Styles (inline for simplicity – recommend moving to CSS module)
   const overlayStyle: React.CSSProperties = {
     position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backdropFilter: "blur(4px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -100,19 +143,6 @@ const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
     transition: "background 0.2s",
   };
 
-  const selectAllStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "10px",
-    marginBottom: "16px",
-    fontWeight: 500,
-    color: "#334155",
-    cursor: "pointer",
-  };
-
   const listStyle: React.CSSProperties = {
     listStyle: "none",
     padding: 0,
@@ -128,9 +158,11 @@ const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
     padding: "12px 16px",
     borderBottom: "1px solid #f1f5f9",
     transition: "background 0.2s",
+    cursor: "pointer",
+    backgroundColor: "white",
   };
 
-  const checkboxStyle: React.CSSProperties = {
+  const radioStyle: React.CSSProperties = {
     marginRight: "12px",
     accentColor: "#2563eb",
     width: "18px",
@@ -169,9 +201,8 @@ const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
     borderRadius: "10px",
     fontSize: "0.95rem",
     fontWeight: 500,
-    cursor:
-      selectedUserIds.length === 0 || isAssigning ? "not-allowed" : "pointer",
-    opacity: selectedUserIds.length === 0 || isAssigning ? 0.6 : 1,
+    cursor: !localSelectedUserId || assignLoading ? "not-allowed" : "pointer",
+    opacity: !localSelectedUserId || assignLoading ? 0.6 : 1,
     transition: "background 0.2s, transform 0.1s",
     boxShadow: "0 4px 6px -1px rgba(37,99,235,0.2)",
   };
@@ -206,51 +237,41 @@ const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <h3 style={titleStyle}>Assign to Sales Users</h3>
+          <h3 style={titleStyle}>Assign Lead to Sales User</h3>
           <button onClick={onClose} style={closeButtonStyle} aria-label="Close">
             ✕
           </button>
         </div>
 
-        {isLoading && (
+        {loading && (
           <div style={loadingStyle}>
             <div>Loading sales users...</div>
-            {/* You can add a spinner here */}
           </div>
         )}
 
-        {error && (
-          <div style={errorStyle}>Failed to load users. Please try again.</div>
+        {(error || assignError) && (
+          <div style={errorStyle}>
+            {error || assignError || "Failed to load users. Please try again."}
+          </div>
         )}
 
-        {salesUsers && (
+        {salesUsers && salesUsers.length > 0 && (
           <>
-            <div
-              style={selectAllStyle}
-              onClick={() =>
-                handleSelectAll(selectedUserIds.length !== salesUsers.length)
-              }
-            >
-              <input
-                type="checkbox"
-                onChange={(e) => handleSelectAll(e.target.checked)}
-                checked={selectedUserIds.length === salesUsers.length}
-                style={checkboxStyle}
-              />
-              <span>Select All ({salesUsers.length} users)</span>
-            </div>
-
             <ul style={listStyle}>
               {salesUsers.map((user: User) => (
-                <li key={user.uuid} style={listItemStyle}>
+                <li
+                  key={user.uuid}
+                  style={listItemStyle}
+                  onClick={() => handleRadioChange(user.uuid)}
+                >
                   <label style={labelStyle}>
                     <input
-                      type="checkbox"
-                      checked={selectedUserIds.includes(user.uuid)}
-                      onChange={(e) =>
-                        handleCheckboxChange(user.uuid, e.target.checked)
-                      }
-                      style={checkboxStyle}
+                      type="radio"
+                      name="salesUser"
+                      value={user.uuid}
+                      checked={localSelectedUserId === user.uuid}
+                      onChange={(e) => handleRadioChange(e.target.value)}
+                      style={radioStyle}
                     />
                     <span>
                       {user.name}
@@ -267,23 +288,17 @@ const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isAssigning || selectedUserIds.length === 0}
+                disabled={assignLoading || !localSelectedUserId}
                 style={primaryButtonStyle}
-                onMouseEnter={(e) => {
-                  if (selectedUserIds.length > 0 && !isAssigning) {
-                    e.currentTarget.style.backgroundColor = "#1d4ed8";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedUserIds.length > 0 && !isAssigning) {
-                    e.currentTarget.style.backgroundColor = "#2563eb";
-                  }
-                }}
               >
-                {isAssigning ? "Assigning..." : "Assign"}
+                {assignLoading ? "Assigning..." : "Assign Lead"}
               </button>
             </div>
           </>
+        )}
+
+        {!loading && (!salesUsers || salesUsers.length === 0) && (
+          <div style={loadingStyle}>No sales users available</div>
         )}
       </div>
     </div>

@@ -17,15 +17,15 @@ import { markUnwanted } from "@/app/features/lead/leadSlice";
 import {
   useLeadColumns,
   type LeadColumn,
-} from "../../../../../types/leads/leadTableColumns";
-import { LeadSearchFilters } from "../../../../../types/leads/leadsearch";
+} from "../../../../../types/LeadsTable/leadTableColumns";
+import { LeadSearchFilters } from "../../../../../types/LeadsTable/leadsearch";
 
 import {
   TABLE_BANNER_COLUMNS,
   LEAD_STATUS_OPTIONS,
   MONTH_OPTIONS,
   CITY_OPTIONS,
-} from "../../../../../types/leads/leadstabledata";
+} from "../../../../../types/LeadsTable/leadstabledata";
 
 // Import from leadstatus
 import {
@@ -36,7 +36,7 @@ import {
   calculateMonthPickupCounts,
   type LeadStatusCounts,
   type LeadStatusPercentages,
-} from "../../../../../types/leads/leadstatus";
+} from "../../../../../types/LeadsTable/leadstatus";
 
 const BANNER_GROUP_LIGHT_BG_CLASS: Record<string, string> = {
   STATUS: "bg-blue-200",
@@ -522,15 +522,6 @@ export default function LeadsTable() {
                 Loading...
               </td>
             </tr>
-          ) : error ? (
-            <tr>
-              <td
-                className="px-4 text-sm font-semibold text-center border border-white text-rose-500"
-                colSpan={cols.length}
-              >
-                Error: {error}
-              </td>
-            </tr>
           ) : filteredLeads.length === 0 ? (
             <tr>
               <td
@@ -782,7 +773,7 @@ export default function LeadsTable() {
         <AssignSalesModal
           isOpen={isAssignModalOpen}
           onClose={handleCloseModal}
-          entityId={selectedLeadId}
+          leadId={selectedLeadId}
         />
       )}
     </>

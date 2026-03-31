@@ -1,5 +1,4 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-
 import type { User } from "@/types/types";
 import { createUser, currentUser, loginUser } from "./userApi";
 
@@ -28,6 +27,7 @@ export const loginUserThunk = createAsyncThunk<
     return rejectWithValue(error.message || "Login failed");
   }
 });
+
 export const currentUserThunk = createAsyncThunk<
   User,
   void,
@@ -66,6 +66,7 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Login user
       .addCase(loginUserThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -75,14 +76,14 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.currentUser = action.payload;
-        },
+        }
       )
       .addCase(loginUserThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      // CURRENT USER
+      // Current user
       .addCase(currentUserThunk.pending, (state) => {
         state.loading = true;
       })
@@ -91,7 +92,7 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.currentUser = action.payload;
-        },
+        }
       )
       .addCase(currentUserThunk.rejected, (state, action) => {
         state.loading = false;
@@ -99,7 +100,7 @@ const userSlice = createSlice({
         state.error = action.payload || null;
       })
 
-      // create user
+      // Create user
       .addCase(createUserThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -109,7 +110,7 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.createdUser = action.payload;
-        },
+        }
       )
       .addCase(createUserThunk.rejected, (state, action) => {
         state.loading = false;
@@ -117,42 +118,6 @@ const userSlice = createSlice({
       });
   },
 });
-
-
-
-// app/features/lead/leadSlice.ts
-export const updateLead = createAsyncThunk(
-  'leads/update',
-  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`/api/leads/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Update failed');
-      return result;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
-export const fetchLeads = createAsyncThunk(
-  'leads/fetchAll',
-  async (page: number = 1, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`/api/leads?page=${page}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Fetch failed');
-      return data;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
 
 export const { logout } = userSlice.actions;
 export default userSlice.reducer;

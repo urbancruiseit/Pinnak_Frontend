@@ -5,10 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SubmitHandler } from "react-hook-form";
-import {
-  getAllCitiesThunk,
-} from "@/app/features/travelcity/travelcitySlice";
-import Popup from '@/app/components/pages/leads/list/popup';
+import { getAllCitiesThunk } from "@/app/features/travelcity/travelcitySlice";
+
+import { useRouter } from "next/navigation";
 
 import {
   User,
@@ -25,30 +24,33 @@ import {
   CheckCircle,
 } from "lucide-react";
 import type { LeadRecord } from "../../../../../types/types";
-import {
-  createLead,
-  updateLead,
-  fetchLeads,
-} from "@/app/features/lead/leadSlice";
+import { createLead, fetchLeads } from "@/app/features/lead/leadSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/app/redux/store";
 import { getCountriesThunk } from "@/app/features/countrycode/countrycodeSlice";
 import { fetchVehicles } from "@/app/features/vehicle/vehicleSlice";
 
+// Import constants from editleaddata
+import {
+  SOURCE_OPTIONS,
+  CITY_OPTIONS,
+  SERVICE_TYPE_OPTIONS,
+  OCCASION_OPTIONS,
+  TRIP_TYPE_OPTIONS,
+  CATEGORY_OPTIONS,
+  DEFAULT_VALUES,
+} from "../../../../../types/Editleads/editleaddata";
+
 // ==================== SCHEMA DEFINITION ====================
 const schema = z.object({
-  // Enquiry Information
   date: z.string().min(1, "Date is required"),
   source: z.string().min(1, "Source is required"),
   telesales: z.string().min(1, "Presales is required"),
   status: z.string().min(1, "Status is required"),
-
-  // Customer Information
   customerType: z.string().min(1, "Customer category is required"),
   customerCategoryType: z.string().optional(),
   countryName: z.string().min(1, "Country is required"),
   customerCity: z.string().optional(),
-
   serviceType: z.string().optional(),
   tripType: z.string().optional(),
   occasion: z.string().optional(),
@@ -60,13 +62,9 @@ const schema = z.object({
   pickupcity: z.string().optional(),
   dropcity: z.string().optional(),
   city: z.string().optional(),
-
   passengerTotal: z.number().optional(),
-
   petsNumber: z.number().optional(),
   petsNames: z.string().optional(),
-
-  // ALL VEHICLE FIELDS OPTIONAL
   vehicle2: z.string().optional(),
   vehicles: z.string().optional(),
   vehicle3: z.string().optional(),
@@ -74,15 +72,12 @@ const schema = z.object({
   vehicle2Quantity: z.string().optional(),
   vehicle1Quantity: z.string().optional(),
   requirementVehicle: z.string().optional(),
-
   km: z.union([z.string(), z.number()]).optional(),
-
   smallbaggage: z.number().optional(),
   mediumbaggage: z.number().optional(),
   largebaggage: z.number().optional(),
   airportbaggage: z.number().optional(),
   totalbaggage: z.number().optional(),
-
   itinerary: z.array(z.string()).optional(),
   remarks: z.string().optional(),
   lost_reason: z.string().optional(),
@@ -93,10 +88,9 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
-  initialData,
-}) => {
+const LeadsForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const { countries } = useSelector((state: RootState) => state.country);
   const { vehicleCodes } = useSelector((state: RootState) => state.vehicle);
   const { travelcity, loading } = useSelector(
@@ -118,13 +112,13 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
       pickupDateTime: new Date().toISOString().slice(0, 16),
       customerType: "Personal",
       date: new Date().toISOString().slice(0, 16),
-      days: 1,
-      smallbaggage: 0,
-      mediumbaggage: 0,
-      largebaggage: 0,
-      airportbaggage: 0,
-      totalbaggage: 0,
-      petsNumber: 0,
+      days: DEFAULT_VALUES.days,
+      smallbaggage: DEFAULT_VALUES.smallbaggage,
+      mediumbaggage: DEFAULT_VALUES.mediumbaggage,
+      largebaggage: DEFAULT_VALUES.largebaggage,
+      airportbaggage: DEFAULT_VALUES.airportbaggage,
+      totalbaggage: DEFAULT_VALUES.totalbaggage,
+      petsNumber: DEFAULT_VALUES.petsNumber,
       vehicles: "",
       vehicle2: "",
       vehicle3: "",
@@ -157,20 +151,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentItinerary, setCurrentItinerary] = useState("");
   const [itineraryList, setItineraryList] = useState<string[]>([]);
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupData, setPopupData] = useState({
-    dateTime: "",
-    customer: "",
-    startDate: "",
-    endDate: "",
-    days: 0,
-  });
+
   const [customerCategoryTypeValue, setCustomerCategoryTypeValue] =
     useState("");
   const [countryCode] = useState("+91");
   const [alternateCountryCode, setAlternateCountryCode] = useState("+91");
-
-  const isEditMode = !!initialData?.id;
 
   const pickupDateTime = watch("pickupDateTime");
   const dropDateTime = watch("dropDateTime");
@@ -180,43 +165,20 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
   const airportbaggage = watch("airportbaggage");
   const customerType = watch("customerType");
   const serviceType = watch("serviceType");
-  
-  // Vehicle Watch
+
   const vehicle1 = watch("vehicles");
   const vehicle2 = watch("vehicle2");
   const vehicle3 = watch("vehicle3");
-
   const qty1 = watch("vehicle1Quantity");
   const qty2 = watch("vehicle2Quantity");
   const qty3 = watch("vehicle3Quantity");
 
-  const categoryOptions: Record<string, string[]> = {
-    Personal: ["Personal"],
-    Corporate: [
-      "Company",
-      "Educational Institute",
-      "Sporting Company",
-      "Government",
-      "NGO",
-    ],
-    "Travel Agent": [
-      "Travel Agent",
-      "Tour Operator",
-      "Hotel",
-      "Wedding Planner",
-      "DMC",
-      "EMC",
-    ],
-  };
-
   useEffect(() => {
     dispatch(getCountriesThunk());
   }, [dispatch]);
-
   useEffect(() => {
     dispatch(getAllCitiesThunk());
   }, [dispatch]);
-  
   useEffect(() => {
     dispatch(fetchVehicles());
   }, [dispatch]);
@@ -226,9 +188,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
       const currentCountry = watch("countryName");
       if (!currentCountry) {
         const india = countries.find((c) => c.country_name === "India");
-        if (india) {
-          setValue("countryName", "India");
-        }
+        if (india) setValue("countryName", "India");
       }
     }
   }, [countries, setValue, watch]);
@@ -247,142 +207,39 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
       setValue("days", 2);
       return;
     }
-
     if (serviceType === "One Way") {
       setValue("days", 1);
       setValue("dropcity", "");
       setValue("dropAddress", "");
       return;
     }
-
     if (pickupDateTime && dropDateTime) {
       const pickup = new Date(pickupDateTime.split("T")[0]);
       const drop = new Date(dropDateTime.split("T")[0]);
-
       const diffDays =
         (drop.getTime() - pickup.getTime()) / (1000 * 60 * 60 * 24);
-
       const totalDays = diffDays + 1;
-
       setValue("days", totalDays > 0 ? totalDays : 1);
     } else {
       setValue("days", 0);
     }
   }, [serviceType, pickupDateTime, dropDateTime, setValue]);
 
-  // Vehicle combination effect - only creates string when both vehicle and quantity are present
   useEffect(() => {
     const vehiclesList: string[] = [];
-
-    if (vehicle1 && vehicle1.trim() !== "" && qty1 && qty1.trim() !== "") {
+    if (vehicle1 && vehicle1.trim() !== "" && qty1 && qty1.trim() !== "")
       vehiclesList.push(`${vehicle1} x ${qty1}`);
-    }
-
-    if (vehicle2 && vehicle2.trim() !== "" && qty2 && qty2.trim() !== "") {
+    if (vehicle2 && vehicle2.trim() !== "" && qty2 && qty2.trim() !== "")
       vehiclesList.push(`${vehicle2} x ${qty2}`);
-    }
-
-    if (vehicle3 && vehicle3.trim() !== "" && qty3 && qty3.trim() !== "") {
+    if (vehicle3 && vehicle3.trim() !== "" && qty3 && qty3.trim() !== "")
       vehiclesList.push(`${vehicle3} x ${qty3}`);
-    }
-
-    const result = vehiclesList.join(", ");
-    setValue("requirementVehicle", result);
+    setValue("requirementVehicle", vehiclesList.join(", "));
   }, [vehicle1, vehicle2, vehicle3, qty1, qty2, qty3, setValue]);
 
   useEffect(() => {
     const now = new Date();
-    const currentDateTime = now.toISOString().slice(0, 16);
-    setValue("date", currentDateTime);
+    setValue("date", now.toISOString().slice(0, 16));
   }, [setValue]);
-
-  useEffect(() => {
-    if (initialData) {
-      const parsePhone = (phone: string) => {
-        if (!phone) return { code: "+91", number: "" };
-        const match = phone.match(/^\+(\d{1,3})\s*(.*)$/);
-        if (match) {
-          return { code: "+" + match[1], number: match[2].trim() };
-        }
-        return { code: "+91", number: phone.trim() };
-      };
-
-      const mainPhone = parsePhone(initialData.customerPhone || "");
-      const altPhone = parsePhone(initialData.alternatePhone || "");
-
-      setAlternateCountryCode(altPhone.code);
-
-      setFormData({
-        name: initialData.customerName || "",
-        phone: mainPhone.number,
-        alternatePhone: altPhone.number,
-        email: initialData.customerEmail || "",
-        companyName:
-          initialData.customerType === "Personal"
-            ? "C"
-            : initialData.companyName || "",
-      });
-
-      setValue("date", initialData.enquiryTime?.slice(0, 16) || "");
-      setValue("source", initialData.source);
-      setValue("telesales", initialData.telecaller);
-      setValue("status", initialData.status);
-      setValue("customerType", initialData.customerType);
-      setValue(
-        "customerCategoryType",
-        (initialData as any).customerCategoryType || "",
-      );
-      setCustomerCategoryTypeValue(
-        (initialData as any).customerCategoryType || "",
-      );
-      setValue("serviceType", initialData.serviceType || "");
-      setValue("tripType", initialData.tripType || "");
-      setValue("occasion", initialData.occasion || "");
-      setValue(
-        "pickupDateTime",
-        initialData.pickupDateTime?.replace(" ", "T").slice(0, 16) || "",
-      );
-      setValue(
-        "dropDateTime",
-        initialData.dropDateTime?.replace(" ", "T").slice(0, 16) || "",
-      );
-      setValue("pickupAddress", initialData.pickupAddress || "");
-      setValue("dropAddress", initialData.dropAddress || "");
-      setValue("pickupcity", (initialData as any).pickupcity || "");
-      setValue("dropcity", (initialData as any).dropcity || "");
-      setValue("passengerTotal", initialData.passengerTotal);
-      setValue("days", initialData.days);
-      setValue("km", String(initialData.km));
-      setValue("petsNumber", initialData.petsNumber || 0);
-      setValue("petsNames", initialData.petsNames || "");
-      setValue("vehicles", initialData.vehicles || "");
-      setValue("vehicle2", initialData.vehicle2 || "");
-      setValue("vehicle3", initialData.vehicle3 || "");
-      setValue("vehicle3Quantity", initialData.vehicle3Quantity || "");
-      setValue("vehicle2Quantity", initialData.vehicle2Quantity || "");
-      setValue("vehicle1Quantity", initialData.vehicle1Quantity || "");
-      setValue(
-        "requirementVehicle",
-        (initialData as any).requirementVehicle || "",
-      );
-      setValue("smallbaggage", initialData.smallBaggage || 0);
-      setValue("mediumbaggage", initialData.mediumBaggage || 0);
-      setValue("largebaggage", initialData.largeBaggage || 0);
-      setValue("airportbaggage", initialData.airportBaggage || 0);
-      setValue("totalbaggage", initialData.totalBaggage || 0);
-      setValue("remarks", initialData.remarks || "");
-      setValue("countryName", initialData.countryName || "");
-      setValue("city", initialData.city || "");
-      setValue("customerCity", initialData.customerCity || "");
-
-      if (initialData.itinerary) {
-        setItineraryList(initialData.itinerary);
-        setValue("itinerary", initialData.itinerary);
-      }
-
-      setTimeout(() => trigger(), 100);
-    }
-  }, [initialData, setValue, trigger]);
 
   const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -425,14 +282,12 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
       email: "",
       companyName: "",
     });
-
     setItineraryList([]);
     setCurrentItinerary("");
     setCustomerCategoryTypeValue("");
     setAlternateCountryCode("+91");
-
     reset({
-      status: "BLANK",
+      status: "-",
       pickupDateTime: new Date().toISOString().slice(0, 16),
       customerType: "Personal",
       date: new Date().toISOString().slice(0, 16),
@@ -473,11 +328,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsSubmitting(true);
-
     try {
-      // Clean the payload - remove any undefined values and ensure all fields are properly set
       const payload: any = {
-        date: data.date ? data.date.split("T")[0] : new Date().toISOString().split("T")[0],
+        date: data.date
+          ? data.date.split("T")[0]
+          : new Date().toISOString().split("T")[0],
         enquiryTime: data.date ? `${data.date}:00` : new Date().toISOString(),
         source: data.source || "",
         status: data.status || "-",
@@ -488,13 +343,16 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
           ? `+${alternateCountryCode} ${formData.alternatePhone}`
           : "",
         customerEmail: formData.email || "",
-        companyName: formData.companyName === "C" ? "" : formData.companyName || "",
+        companyName:
+          formData.companyName === "C" ? "" : formData.companyName || "",
         customerType: data.customerType || "Personal",
         customerCategoryType: data.customerCategoryType || "",
         serviceType: data.serviceType || "",
         occasion: data.occasion || "",
         tripType: data.tripType || "",
-        pickupDateTime: data.pickupDateTime ? `${data.pickupDateTime}:00` : null,
+        pickupDateTime: data.pickupDateTime
+          ? `${data.pickupDateTime}:00`
+          : null,
         dropDateTime: data.dropDateTime ? `${data.dropDateTime}:00` : null,
         pickupAddress: data.pickupAddress || "",
         dropAddress: data.dropAddress || "",
@@ -510,7 +368,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
         requirementVehicle: data.requirementVehicle || "",
         passengerTotal: data.passengerTotal || 0,
         days: Number(data.days) || 0,
-        km: data.km ? (typeof data.km === "string" ? parseInt(data.km) || 0 : data.km) : 0,
+        km: data.km
+          ? typeof data.km === "string"
+            ? parseInt(data.km) || 0
+            : data.km
+          : 0,
         petsNumber: Number(data.petsNumber) || 0,
         petsNames: data.petsNames || "",
         smallBaggage: Number(data.smallbaggage) || 0,
@@ -528,47 +390,22 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
         followUp: (data as any).followUp || "",
       };
 
-      if (isEditMode && initialData?.id) {
-        await dispatch(
-          updateLead({ id: initialData.id, data: payload }),
-        ).unwrap();
-        showToastMessage("Lead updated successfully!");
-      } else {
-        await dispatch(createLead(payload)).unwrap();
+      await dispatch(createLead(payload)).unwrap();
 
-        setPopupData({
-          dateTime: data.date
-            ? new Date(data.date).toLocaleString()
-            : new Date().toLocaleString(),
-          customer: formData.name,
-          startDate: data.pickupDateTime
-            ? new Date(data.pickupDateTime).toLocaleDateString()
-            : "",
-          endDate: data.dropDateTime
-            ? new Date(data.dropDateTime).toLocaleDateString()
-            : "",
-          days: Number(data.days) || 0,
-        });
-        setShowPopup(true);
-        showToastMessage("Lead created successfully!");
-        resetFormFields();
-      }
+      showToastMessage("Lead created successfully!");
+      resetFormFields();
 
       dispatch(fetchLeads(1));
       window.dispatchEvent(new CustomEvent("leadSubmitted"));
+
+      // ✅ Navigate to lead table within the dashboard
+      window.dispatchEvent(new CustomEvent("navigateToLeadTable"));
     } catch (error: any) {
       console.error("Submit Error:", error);
-      
       let errorMessage = "Failed to save lead. Please try again.";
-      
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.payload) {
-        errorMessage = error.payload;
-      } else if (error?.data?.message) {
-        errorMessage = error.data.message;
-      }
-      
+      if (error?.message) errorMessage = error.message;
+      else if (error?.payload) errorMessage = error.payload;
+      else if (error?.data?.message) errorMessage = error.data.message;
       showToastMessage(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -613,7 +450,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
         <div className="flex justify-between items-center">
           <div className="pl-4 border-l-8 border-orange-500 bg-white px-3 rounded-md shadow-md">
             <h2 className="text-4xl font-bold text-left py-4 text-orange-600">
-              {isEditMode ? "Edit Lead" : "New Leads Form"}
+              New Leads Form
             </h2>
           </div>
         </div>
@@ -674,15 +511,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                     className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Source Type</option>
-                    <option value="Call">Call</option>
-                    <option value="WA">WA</option>
-                    <option value="GAC">GAC</option>
-                    <option value="GAQ">GAQ</option>
-                    <option value="Email">Email</option>
-                    <option value="META">META</option>
-                    <option value="GA">GA</option>
-                    <option value="REP-C">REP-C</option>
-                    <option value="REF-C">REF-C</option>
+                    {SOURCE_OPTIONS.map((source) => (
+                      <option key={source} value={source}>
+                        {source}
+                      </option>
+                    ))}
                   </select>
                   <FileText
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
@@ -718,6 +551,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                 </div>
               </div>
 
+              {/* City */}
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   City
@@ -732,10 +566,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                     className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select City</option>
-                    <option value="delhi">Delhi</option>
-                    <option value="gurgoan">Gurgoan</option>
-                    <option value="hydrabad">Hydrabad</option>
-                    <option value="noida">Noida</option>
+                    {CITY_OPTIONS.map((city) => (
+                      <option key={city} value={city}>
+                        {city.charAt(0).toUpperCase() + city.slice(1)}
+                      </option>
+                    ))}
                   </select>
                   <FileText
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
@@ -755,7 +590,6 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               Customer Information
             </h3>
 
-            {/* First Row - 4 columns */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               {/* Name */}
               <div>
@@ -784,7 +618,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                 </div>
               </div>
 
-              {/* Phone (India) */}
+              {/* Phone India */}
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Phone No. (India) <span className="text-red-500">*</span>
@@ -796,7 +630,20 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   <input
                     name="phone"
                     value={formData.phone}
-                    onChange={handleFieldChange}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(
+                        /[^0-9]/g,
+                        "",
+                      );
+                      handleFieldChange({
+                        ...e,
+                        target: {
+                          ...e.target,
+                          name: "phone",
+                          value: numericValue,
+                        },
+                      });
+                    }}
                     placeholder="Enter phone number"
                     className="w-full py-2 px-3 outline-none"
                     maxLength={10}
@@ -831,7 +678,20 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   <input
                     name="alternatePhone"
                     value={formData.alternatePhone}
-                    onChange={handleFieldChange}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(
+                        /[^0-9]/g,
+                        "",
+                      );
+                      handleFieldChange({
+                        ...e,
+                        target: {
+                          ...e.target,
+                          name: "alternatePhone",
+                          value: numericValue,
+                        },
+                      });
+                    }}
                     placeholder="Enter phone number"
                     className="w-full py-2 px-3 outline-none"
                     maxLength={15}
@@ -873,7 +733,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Customer Category - 20% */}
+              {/* Customer Category */}
               <div className="w-full">
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Customer Category <span className="text-red-500">*</span>
@@ -913,7 +773,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                 )}
               </div>
 
-              {/* Customer Type - 20% */}
+              {/* Customer Type */}
               <div className="w-full">
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Customer Type
@@ -930,7 +790,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   >
                     <option value="">Select Customer Type</option>
                     {customerType &&
-                      categoryOptions[customerType]?.map((item, index) => (
+                      CATEGORY_OPTIONS[customerType]?.map((item, index) => (
                         <option key={index} value={item}>
                           {item}
                         </option>
@@ -942,7 +802,8 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   />
                 </div>
               </div>
-              {/* Company Name - 20% (Conditional) */}
+
+              {/* Company Name (Conditional) */}
               {customerType !== "Personal" && (
                 <div className="w-full">
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
@@ -969,7 +830,8 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   </div>
                 </div>
               )}
-              {/* Country Name - 20% */}
+
+              {/* Country Name */}
               <div className="w-full">
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Country Name
@@ -1009,7 +871,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                 )}
               </div>
 
-              {/* Customer City - 20% */}
+              {/* Customer City */}
               <div className="w-full">
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Customer City
@@ -1048,6 +910,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               Travel Requirements
             </h3>
 
+            {/* Travel Dates */}
             <div className="p-4 mb-6 bg-white border rounded-lg">
               <span className="mb-3 font-extrabold text-purple-600 text-md">
                 Travel Dates
@@ -1084,6 +947,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                       )}
                     </div>
 
+                    {/* Pickup City */}
                     <div className="w-full md:w-[20%]">
                       <label className="block mb-1 font-extrabold text-gray-700 text-md">
                         Pickup City
@@ -1130,6 +994,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                       )}
                     </div>
 
+                    {/* Pickup Address */}
                     <div className="w-full md:w-[50%]">
                       <label className="block mb-1 font-extrabold text-gray-700 text-md">
                         Pickup Address
@@ -1156,6 +1021,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                       )}
                     </div>
 
+                    {/* No. of Days */}
                     <div className="w-full md:w-[10%]">
                       <label className="block mb-1 font-extrabold text-gray-700 text-md">
                         No. of Days
@@ -1165,7 +1031,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                           type="number"
                           {...register("days", { valueAsNumber: true })}
                           readOnly={serviceType === "Pick & Drop"}
-                          className={`w-full ${serviceType === "Pick & Drop" ? "bg-purple-400 cursor-not-allowed" : "bg-purple-600"} text-white placeholder:text-white/80 placeholder:text-md font-extrabold text-2xl py-2 pl-8 pr-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                          className={`w-full ${serviceType === "Pick & Drop" ? "bg-purple-400 cursor-not-allowed" : "bg-purple-600"} text-white placeholder:text-white/80 font-extrabold text-2xl py-2 pl-8 pr-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                           placeholder="Total Days"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white font-bold pointer-events-none">
@@ -1181,6 +1047,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   </div>
 
                   <div className="flex flex-wrap md:flex-nowrap gap-4">
+                    {/* Drop Date */}
                     <div className="w-full md:w-[20%]">
                       <label className="block mb-1 font-extrabold text-gray-700 text-md">
                         Drop Date & Time
@@ -1273,6 +1140,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                       </>
                     )}
 
+                    {/* Service Type */}
                     <div className="w-full md:w-[15%]">
                       <label className="block text-md font-extrabold text-gray-700 mb-1">
                         Service
@@ -1287,13 +1155,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                         className="w-full py-2 border bg-white px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select</option>
-                        <option value="One Way">One Way</option>
-                        <option value="Pick & Drop">Pick & Drop</option>
-                        <option value="Round Trip">Round Trip</option>
-                        <option value="Round Trip Drop">
-                          Round Trip - Drop
-                        </option>
-                        <option value="Long Term Lease">Lease</option>
+                        {SERVICE_TYPE_OPTIONS.map((service) => (
+                          <option key={service} value={service}>
+                            {service}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -1304,28 +1170,22 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                           Trip Type
                         </label>
                         <div className="flex items-center gap-6 mt-2">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              value="Sightseeing"
-                              {...register("tripType")}
-                              className="accent-blue-500"
-                            />
-                            <span className="text-sm font-semibold">
-                              Sightseeing
-                            </span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              value="Point to Point"
-                              {...register("tripType")}
-                              className="accent-blue-500"
-                            />
-                            <span className="text-sm font-semibold">
-                              Point to Point
-                            </span>
-                          </label>
+                          {TRIP_TYPE_OPTIONS.map((type) => (
+                            <label
+                              key={type}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <input
+                                type="radio"
+                                value={type}
+                                {...register("tripType")}
+                                className="accent-blue-500"
+                              />
+                              <span className="text-sm font-semibold">
+                                {type}
+                              </span>
+                            </label>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -1334,6 +1194,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               </div>
             </div>
 
+            {/* Itinerary Details */}
             <div className="p-4 mb-6 bg-white border rounded-lg">
               <span className="mb-6 font-extrabold text-purple-600 text-md">
                 Itinerary Details
@@ -1440,12 +1301,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                         className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Occasion Type</option>
-                        <option value="Wedding">Wedding</option>
-                        <option value="Vacation">Vacation</option>
-                        <option value="Pilgrimage">Pilgrimage</option>
-                        <option value="Corporate">Corporate</option>
-                        <option value="Event">Event</option>
-                        <option value="Local">Local</option>
+                        {OCCASION_OPTIONS.map((occasion) => (
+                          <option key={occasion} value={occasion}>
+                            {occasion}
+                          </option>
+                        ))}
                       </select>
                       <FileText
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600"
@@ -1457,6 +1317,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               </div>
             </div>
 
+            {/* Passenger Details */}
             <div className="p-6 mt-6 bg-white border rounded-xl">
               <span className="mb-3 font-extrabold text-purple-900 text-md">
                 Passenger Details
@@ -1615,12 +1476,13 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               </div>
             </div>
 
-            {/* Vehicle Details Section - ALL FIELDS OPTIONAL */}
+            {/* Vehicle Details */}
             <div className="p-6 bg-white border rounded-xl mt-4">
               <span className="mb-3 font-extrabold text-purple-900 text-md">
                 Vehicle Details (Optional)
               </span>
               <div className="flex flex-wrap gap-4 mt-4">
+                {/* Vehicle 1 */}
                 <div className="w-full md:w-[20%]">
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
                     Vehicle Type 1
@@ -1640,9 +1502,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                             const numB = parseInt(
                               b.code.match(/\d+/)?.[0] || "0",
                             );
-                            if (numA !== numB) {
-                              return numA - numB;
-                            }
+                            if (numA !== numB) return numA - numB;
                             return a.code.localeCompare(b.code);
                           })
                           .map(
@@ -1674,6 +1534,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   </div>
                 </div>
 
+                {/* Vehicle 2 */}
                 <div className="w-full md:w-[20%]">
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
                     Vehicle Type 2
@@ -1693,11 +1554,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                             const numB = parseInt(
                               b.code.match(/\d+/)?.[0] || "0",
                             );
-
-                            if (numA !== numB) {
-                              return numA - numB;
-                            }
-
+                            if (numA !== numB) return numA - numB;
                             return a.code.localeCompare(b.code);
                           })
                           .map(
@@ -1729,6 +1586,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   </div>
                 </div>
 
+                {/* Vehicle 3 */}
                 <div className="w-full md:w-[20%]">
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
                     Vehicle Type 3
@@ -1748,11 +1606,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                             const numB = parseInt(
                               b.code.match(/\d+/)?.[0] || "0",
                             );
-
-                            if (numA !== numB) {
-                              return numA - numB;
-                            }
-
+                            if (numA !== numB) return numA - numB;
                             return a.code.localeCompare(b.code);
                           })
                           .map(
@@ -1784,6 +1638,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   </div>
                 </div>
 
+                {/* Total Vehicle Requirement */}
                 <div className="w-full md:w-[35%]">
                   <label className="block mb-1 font-extrabold text-gray-700 text-md">
                     Total Vehicle Requirement
@@ -1804,7 +1659,7 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
               </div>
             </div>
 
-            {/* Remarks Section */}
+            {/* Remarks */}
             <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-1">
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
@@ -1851,53 +1706,11 @@ const LeadsForm: React.FC<{ initialData?: LeadRecord | null }> = ({
                   : "bg-blue-900 text-white hover:bg-blue-500"
               }`}
             >
-              {isSubmitting
-                ? isEditMode
-                  ? "Updating..."
-                  : "Submitting..."
-                : isEditMode
-                  ? "Update Lead"
-                  : "Submit"}
+              {isSubmitting ? "Submitting..." : "Submit"}
             </button>
           </div>
         </form>
-
-        <Popup 
-          showPopup={showPopup}
-          setShowPopup={setShowPopup}
-          popupData={popupData}
-        />
       </div>
-
-      {/* Styles */}
-      <style jsx>{`
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-        .animate-slide-in-right {
-          animation: slideInRight 0.3s ease-out;
-        }
-        .animate-slide-out-right {
-          animation: slideOutRight 0.3s ease-in;
-        }
-      `}</style>
     </div>
   );
 };

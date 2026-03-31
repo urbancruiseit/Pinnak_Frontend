@@ -49,39 +49,3 @@ export const createUser = async (formData: Partial<User>): Promise<User> => {
     throw new Error(error.response?.data?.message || "User creation failed");
   }
 };
-
-
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-
-export const userApi = createApi({
-  reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: baseApi,
-    credentials: 'include',
-  }),
-  endpoints: (builder) => ({
-    // ... other endpoints
-
-    // ✅ Get all sales users – transform response to return only data array
-    getSalesUsers: builder.query<User[], void>({
-      query: () => '/user/sales',
-      transformResponse: (response: { success: boolean; data: User[] }) => response.data,
-    }),
-
-    // ✅ Assign to users – adjust body to match your backend (e.g., leadId)
-    assignToUsers: builder.mutation<void, { entityId: string; userIds: string[] }>({
-      query: ({ entityId, userIds }) => ({
-        url: '/leads/assign',   // change to your actual endpoint
-        method: 'POST',
-        body: { leadId: entityId, userIds }, // adjust field names as needed
-      }),
-    }),
-  }),
-});
-
-export const {
-  useGetSalesUsersQuery,
-  useAssignToUsersMutation,
-  // ... other hooks
-} = userApi;

@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import userAvatar from "../../assets/user-pic.png";
 import siteIcon from "../../assets/SITE-ICON.png";
-import pinaak from "../../assets/pinaak.jpeg";
+import pinaak from "../../assets/pinaak.png";
 
 type MenuItem = {
   label: string;
@@ -196,7 +196,7 @@ interface NavbarProps {
   onTlTablesSelect?: (key: string) => void;
   onYearSelect?: (key: string) => void;
   onAccessSelect?: (key: string) => void;
- 
+
   permittedMasterKeys?: string[] | null;
   selectedRegion?: string;
   selectedCity?: string;
@@ -354,8 +354,6 @@ export function Navbar({
     setMobileOpen(false);
   };
 
-  
-
   return (
     <nav
       ref={navbarRef}
@@ -406,8 +404,7 @@ export function Navbar({
               <Image
                 src={pinaak}
                 alt="logo"
-                width={200}
-                height={40}
+                width={150}
                 className="rounded-xl hidden sm:block flex-shrink-0"
               />
             </div>
@@ -699,6 +696,27 @@ export function Navbar({
                 }}
                 className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
               >
+                <option value="">Region</option>
+                {REGIONS.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </select>
+              <MapPin
+                size={14}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-orange-500 transition-colors"
+              />
+            </div>
+
+            <div className="relative group w-full md:w-28 lg:w-32">
+              <select
+                value={selectedRegion}
+                onChange={(event) => {
+                  onRegionChange?.(event.target.value);
+                }}
+                className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
+              >
                 <option value="">Zone</option>
                 {REGIONS.map((region) => (
                   <option key={region} value={region}>
@@ -807,6 +825,19 @@ export function Navbar({
                       >
                         <span className="w-1 h-1 rounded-full bg-orange-300"></span>
                         Sign out
+                      </button>
+                    )}
+
+                    {onLogout && (
+                      <button
+                        onClick={() => {
+                          onLogout();
+                          setOpenMenu(null);
+                        }}
+                        className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-orange-300"></span>
+                        Reset PAssword
                       </button>
                     )}
                   </div>

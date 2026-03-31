@@ -146,6 +146,15 @@ export interface User {
   data?: any;
   uuid: string;
 }
+// types/types.ts
+export interface User {
+  id?: string;
+  _id?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  // Add other fields as needed
+}
 
 export interface countryData {
   id: number;

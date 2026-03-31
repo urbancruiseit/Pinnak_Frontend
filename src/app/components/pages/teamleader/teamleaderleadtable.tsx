@@ -26,7 +26,7 @@ import {
   statusClassMap,
   LEAD_STATUS_OPTIONS,
   MONTH_OPTIONS,
-} from "../../../../types/leads/leadstabledata";
+} from "../../../../types/LeadsTable/leadstabledata";
 
 import Pagination from "../../ui/pagination";
 

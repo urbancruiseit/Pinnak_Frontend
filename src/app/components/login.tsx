@@ -80,18 +80,16 @@ export function Login() {
                   <Image
                     src={pinnak}
                     alt="Pinnak Logo"
-                    
                     className="object-contain"
                   />
                 </div>
               </div>
 
               <div className="space-y-4 text-center">
-              
                 <p className="text-base text-gray-700 md:text-lg leading-relaxed">
                   Transform your sales pipeline with intelligent lead scoring,
-                  automated follow-ups, and predictive analytics. Pinnak
-                  helps you convert more leads into loyal customers.
+                  automated follow-ups, and predictive analytics. Pinnak helps
+                  you convert more leads into loyal customers.
                 </p>
               </div>
             </div>
@@ -178,21 +176,6 @@ export function Login() {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-15px);
-          }
-        }
-        .animate-float {
-          animation: float 5s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }

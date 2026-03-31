@@ -152,6 +152,7 @@ interface UseLeadColumnsProps {
   handleUnwantedClick: (lead: LeadRecord, e: React.MouseEvent) => void;
   handleViewLead: (lead: LeadRecord) => void;
   setEditLead: (lead: LeadRecord | null) => void;
+  handleRateQuotation?: (lead: LeadRecord, e: React.MouseEvent) => void; // Add this optional prop
 }
 
 // ============ MAIN HOOK ============
@@ -160,6 +161,7 @@ export const useLeadColumns = ({
   handleUnwantedClick,
   handleViewLead,
   setEditLead,
+  handleRateQuotation, // Add this to the destructured props
 }: UseLeadColumnsProps) => {
   return useMemo<LeadColumn[]>(() => {
     return TABLE_BANNER_COLUMNS.map((col) => ({
@@ -172,14 +174,23 @@ export const useLeadColumns = ({
         if (col.key === "actions") {
           return (
             <div className="flex gap-1 justify-evenly">
-             
+              {/* Rate Quotation Button - Only show if handler is provided */}
+              {handleRateQuotation && (
+                <button
+                  onClick={(e) => handleRateQuotation(lead, e)}
+                  className="p-1 text-white transition-colors bg-green-600 rounded hover:bg-green-700"
+                  title="Add Rate Quotation"
+                >
+                  <span className="text-xs font-medium">💰</span>
+                </button>
+              )}
 
               <button
-  onClick={(e) => handleUnwantedClick(lead, e)}
-  className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600"
->
-  ❌
-</button>
+                onClick={(e) => handleUnwantedClick(lead, e)}
+                className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600"
+              >
+                ❌
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -574,5 +585,5 @@ export const useLeadColumns = ({
       },
       sticky: false,
     }));
-  }, [handleUnwantedClick, handleViewLead, setEditLead]);
+  }, [handleUnwantedClick, handleViewLead, setEditLead, handleRateQuotation]); // Add handleRateQuotation to dependency array
 };
