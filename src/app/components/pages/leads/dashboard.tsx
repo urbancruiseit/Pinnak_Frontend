@@ -17,51 +17,93 @@ import type { LeadRecord } from "@/types/types";
 
 export default function LeadsDashboard() {
   const dispatch = useDispatch<AppDispatch>();
-  const { leads, loading, error, totalPages, total } = useSelector(
-    (state: RootState) => state.lead,
-  );
+  const {
+    leads = [],
+    loading = false,
+    error = null,
+    totalPages = 0,
+    total = 0,
+  } = useSelector((state: RootState) => state.lead || {});
   const [period, setPeriod] = useState<"month" | "week" | "day">("month");
 
   useEffect(() => {
-    // Fetch all leads for dashboard (use a large limit to get all)
-    dispatch(fetchLeads(1) as any);
+    try {
+      dispatch(fetchLeads(1) as any);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   }, [dispatch]);
 
-  // Calculate stats from Redux leads
-  const totalLeads = total;
-  const pendingLeads = useMemo(
-    () =>
-      leads.filter((lead) => !["Book", "Lost"].includes(lead.status)).length,
-    [leads],
-  );
-  const bookedLeads = useMemo(
-    () => leads.filter((lead) => lead.status === "Book").length,
-    [leads],
-  );
-  const lostLeads = useMemo(
-    () => leads.filter((lead) => lead.status === "Lost").length,
-    [leads],
-  );
+  // Safe calculations with try-catch
+  const getSafeLeads = () => {
+    try {
+      return Array.isArray(leads) ? leads : [];
+    } catch {
+      return [];
+    }
+  };
 
-  // All leads sorted by date descending (latest first)
-  const ageLeads = useMemo(
-    () =>
-      [...leads].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      ),
-    [leads],
-  );
+  const safeLeads = getSafeLeads();
 
-  // Calculate aged leads (older than 7 days)
+  const totalLeads = total || safeLeads.length || 0;
+
+  const pendingLeads = useMemo(() => {
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return 0;
+      return safeLeads.filter(
+        (lead) => lead && !["Book", "Lost"].includes(lead.status),
+      ).length;
+    } catch {
+      return 0;
+    }
+  }, [safeLeads]);
+
+  const bookedLeads = useMemo(() => {
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return 0;
+      return safeLeads.filter((lead) => lead && lead.status === "Book").length;
+    } catch {
+      return 0;
+    }
+  }, [safeLeads]);
+
+  const lostLeads = useMemo(() => {
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return 0;
+      return safeLeads.filter((lead) => lead && lead.status === "Lost").length;
+    } catch {
+      return 0;
+    }
+  }, [safeLeads]);
+
+  const ageLeads = useMemo(() => {
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return [];
+      return [...safeLeads]
+        .filter((lead) => lead && lead.date)
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
+    } catch {
+      return [];
+    }
+  }, [safeLeads]);
+
   const agedLeadsCount = useMemo(() => {
-    const now = new Date();
-    return leads.filter((lead) => {
-      const leadDate = new Date(lead.date);
-      const diffTime = now.getTime() - leadDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
-      return diffDays > 7;
-    }).length;
-  }, [leads]);
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return 0;
+      const now = new Date();
+      return safeLeads.filter((lead) => {
+        if (!lead || !lead.date) return false;
+        const leadDate = new Date(lead.date);
+        const diffTime = now.getTime() - leadDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+        return diffDays > 7;
+      }).length;
+    } catch {
+      return 0;
+    }
+  }, [safeLeads]);
 
   const stats = [
     { title: "Total Leads", value: totalLeads, color: "bg-blue-500" },
@@ -75,44 +117,41 @@ export default function LeadsDashboard() {
     },
   ];
 
-  // Chart data for leads over time
   const chartData = useMemo(() => {
-    return leads.reduce((acc: Record<string, number>, lead) => {
-      const date = new Date(lead.date);
-      let key: string;
-      if (period === "month") {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      } else if (period === "week") {
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        key = weekStart.toISOString().split("T")[0];
-      } else {
-        key = lead.date;
-      }
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-  }, [leads, period]);
+    try {
+      if (!Array.isArray(safeLeads) || safeLeads.length === 0) return {};
+      return safeLeads.reduce((acc: Record<string, number>, lead) => {
+        if (!lead || !lead.date) return acc;
+        const date = new Date(lead.date);
+        let key: string;
+        if (period === "month") {
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        } else if (period === "week") {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          key = weekStart.toISOString().split("T")[0];
+        } else {
+          key = lead.date;
+        }
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+    } catch {
+      return {};
+    }
+  }, [safeLeads, period]);
 
-  const chartArray = useMemo(
-    () =>
-      Object.entries(chartData)
-        .map(([date, count]) => ({
-          date,
-          count,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [chartData],
-  );
+  const chartArray = useMemo(() => {
+    try {
+      return Object.entries(chartData)
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    } catch {
+      return [];
+    }
+  }, [chartData]);
 
-  if (loading) {
-    return <div className="p-6">Loading dashboard...</div>;
-  }
-
-  if (error) {
-    return <div className="p-6 text-red-500"> {error}</div>;
-  }
-
+  // Always show UI - no matter what
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Leads Dashboard</h1>
@@ -136,7 +175,7 @@ export default function LeadsDashboard() {
 
       {/* Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Leads Chart */}
+        {/* Chart Section */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Leads Over Time</h2>
           <div className="mb-4">
@@ -171,20 +210,31 @@ export default function LeadsDashboard() {
               Day
             </label>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartArray}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="h-[300px]">
+            {chartArray.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartArray}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <p>No chart data available</p>
+                  {loading && <p className="text-sm">Loading...</p>}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Lead Age Table */}
+        {/* Table Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Aged Leads</h2>
+          <h2 className="text-xl font-semibold mb-4">Recent Leads</h2>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="min-w-full table-auto">
               <thead className="sticky top-0 bg-gray-50">
@@ -207,28 +257,55 @@ export default function LeadsDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {ageLeads.slice(0, 20).map((lead) => {
-                  const leadDate = new Date(lead.date);
-                  const now = new Date();
-                  const diffTime = now.getTime() - leadDate.getTime();
-                  const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
-                  const formattedDate = leadDate.toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  });
-                  return (
-                    <tr key={lead.id} className="border-t text-gray-900">
-                      <td className="px-4 py-2 text-sm font-medium">
-                        {lead.customerName}
-                      </td>
-                      <td className="px-4 py-2 text-sm">{formattedDate}</td>
-                      <td className="px-4 py-2 text-sm">{lead.telecaller}</td>
-                      <td className="px-4 py-2 text-sm">{diffDays}</td>
-                      <td className="px-4 py-2 text-sm">{lead.status}</td>
-                    </tr>
-                  );
-                })}
+                {ageLeads.length > 0 ? (
+                  ageLeads.slice(0, 20).map((lead, idx) => {
+                    try {
+                      const leadDate = new Date(lead.date);
+                      const now = new Date();
+                      const diffTime = now.getTime() - leadDate.getTime();
+                      const diffDays = Math.floor(
+                        diffTime / (1000 * 3600 * 24),
+                      );
+                      const formattedDate = leadDate.toLocaleDateString(
+                        "en-IN",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      );
+                      return (
+                        <tr
+                          key={lead.id || idx}
+                          className="border-t text-gray-900"
+                        >
+                          <td className="px-4 py-2 text-sm font-medium">
+                            {lead.customerName || "-"}
+                          </td>
+                          <td className="px-4 py-2 text-sm">{formattedDate}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {lead.telecaller || "-"}
+                          </td>
+                          <td className="px-4 py-2 text-sm">{diffDays}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {lead.status || "-"}
+                          </td>
+                        </tr>
+                      );
+                    } catch {
+                      return null;
+                    }
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-12">
+                      <div className="text-gray-400">
+                        <p>No leads found</p>
+                        {loading && <p className="text-sm">Loading...</p>}
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -240,16 +317,17 @@ export default function LeadsDashboard() {
         <h2 className="text-xl font-semibold mb-4">
           Transfer & Swap Analytics
         </h2>
-        <p className="text-gray-600">
-          Analytics for transferred and swapped leads will be displayed here.
-        </p>
-        {/* Placeholder for transfer/swap data */}
-        <div className="mt-4">
-          <p className="text-sm text-gray-500">
-            No transfer/swap data available yet.
-          </p>
+        <div className="text-center py-12 text-gray-400">
+          <p>No transfer/swap data available</p>
         </div>
       </div>
+
+      {/* Error Display if any */}
+      {error && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 text-sm">Error: {error}</p>
+        </div>
+      )}
     </div>
   );
 }

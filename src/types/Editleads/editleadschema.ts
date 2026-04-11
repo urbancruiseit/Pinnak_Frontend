@@ -3,18 +3,40 @@ import * as z from "zod";
 export const leadSchema = z.object({
   date: z.string().min(1, "Date is required"),
   source: z.enum([
-    "Call", "Email", "WA", "GAC", "GAQ", "META", "GA", "REP-C", "REF-C"
+    "Call",
+    "Email",
+    "WA",
+    "GAC",
+    "GAQ",
+    "META",
+    "GA",
+    "REP-C",
+    "REF-C",
   ]),
   telesales: z.string().min(1, "Presales is required"),
-  status: z.enum(["New", "KYC", "RFQ", "HOT", "Book", "Veh-n", "Lost", "Blank"]).optional(),
+  status: z
+    .enum(["New", "KYC", "RFQ", "HOT", "Book", "Veh-n", "Lost", "Blank"])
+    .optional(),
   customerType: z.enum(["Personal", "Corporate", "Travel Agent"]),
   customerCategoryType: z.string().optional(),
   countryName: z.string().min(1, "Country is required"),
-  serviceType: z.enum([
-    "One Way", "Pick & Drop", "Round Trip", "Long Term Lease",
-    "Wedding", "Vacation", "Pilgrimage", "Corporate", "Local"
-  ]).optional(),
-  tripType: z.enum(["pickup", "drop", "both", "Sightseeing", "Point to Point"]).optional(),
+  serviceType: z
+    .enum([
+      "One Way",
+      "Pick & Drop",
+      "Round Trip",
+      "Round Trip Drop",
+      "Long Term Lease",
+      "Wedding",
+      "Vacation",
+      "Pilgrimage",
+      "Corporate",
+      "Local",
+    ])
+    .optional(),
+  tripType: z
+    .enum(["pickup", "drop", "both", "Sightseeing", "Point to Point"])
+    .optional(),
   occasion: z.string().optional(),
   pickupDateTime: z.string().min(1, "Pickup date is required"),
   dropDateTime: z.string().optional(),
@@ -24,7 +46,10 @@ export const leadSchema = z.object({
   pickupcity: z.string().min(1, "Pickup city is required"),
   dropcity: z.string().min(1, "Drop city is required"),
   city: z.string().optional(),
-  passengerTotal: z.number().min(1, "Passengers is required").or(z.string().min(1, "Passengers is required")),
+  passengerTotal: z
+    .number()
+    .min(1, "Passengers is required")
+    .or(z.string().min(1, "Passengers is required")),
   petsNumber: z.number().optional(),
   petsNames: z.string().optional(),
   vehicle2: z.string().optional(),

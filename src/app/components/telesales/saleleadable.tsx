@@ -11,7 +11,7 @@ import {
 
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
-import SalesEditLeadForm from "../salesteam/salesEditLeadForm";
+import SalesEditLeadForm from "../telesales/salesEditLeadForm";
 import { Eye, Edit, Trash2, UserPlus } from "lucide-react";
 import type { LeadRecord } from "../../../types/types";
 import axios from "axios";
@@ -42,7 +42,7 @@ const CITY_OPTIONS = [
   "Varanasi",
   "Prayagraj",
 ] as const;
-const YEAR_OPTIONS = ["All", "2025", "2026"] as const;
+const YEAR_OPTIONS = ["All", "2025", "2026", "2027", "2028"] as const;
 
 const formatDate = (isoDate: string) => {
   const date = new Date(isoDate);
@@ -286,52 +286,46 @@ export default function LeadsTable() {
         if (col.key === "actions") {
           return (
             <div className="flex gap-1 justify-evenly">
-              {/* Add Rate Quotation Button */}
+              {/* Add Rate Quotation */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Dispatching rateQuotation for lead:", lead.id);
-
-                  // Custom event dispatch karein
                   window.dispatchEvent(
                     new CustomEvent("rateQuotation", {
-                      detail: {
-                        lead: lead,
-                        action: "navigate",
-                      },
+                      detail: { lead: lead, action: "navigate" },
                     }),
                   );
                 }}
-                className="p-1 text-white transition-colors bg-green-600 rounded hover:bg-green-700"
+                className="px-2 py-1 text-xs font-semi-bold text-white bg-green-600 rounded hover:bg-green-700 flex items-center justify-center"
                 title="Add Rate Quotation"
               >
-                <span className="text-xs font-medium">💰</span>
+                💰
               </button>
 
+              {/* View */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Opening modal for lead:", lead.id);
                   setDetailLead(lead);
                   setIsDetailModalOpen(true);
                 }}
-                className="p-1 text-white transition-colors bg-blue-600 rounded hover:bg-blue-700"
+                className="px-2 py-1 text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center justify-center"
                 title="View"
               >
-                <Eye size={16} />
+                <Eye size={14} />
               </button>
 
+              {/* Edit */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Edit button clicked for lead:", lead.id);
                   setDetailLead(lead);
                   setIsEditMode(true);
                 }}
-                className="p-1 text-white transition-colors bg-yellow-900 rounded hover:bg-yellow-950"
+                className="px-2 py-1 text-white bg-yellow-900 rounded hover:bg-yellow-950 flex items-center justify-center"
                 title="Edit"
               >
-                <Edit size={16} />
+                <Edit size={14} />
               </button>
             </div>
           );

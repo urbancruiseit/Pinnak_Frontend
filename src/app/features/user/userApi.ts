@@ -9,7 +9,6 @@ interface LoginData {
 const loginApi = `${baseApi}/user`;
 export const loginUser = async (data: LoginData): Promise<User> => {
   try {
-    console.log("login form data", data);
     const response = await axios.post<User>(`${loginApi}/login`, data, {
       headers: { "Content-Type": "application/json" },
       withCredentials: true,
@@ -27,7 +26,7 @@ export const currentUser = async (): Promise<User> => {
     const response = await axios.get<User>(`${loginApi}/current-user`, {
       withCredentials: true,
     });
-
+console.log("Current user responsessess:", response.data);
     return response.data.data;
   } catch (error: any) {
     console.error("Current user error:", error.response?.data || error.message);

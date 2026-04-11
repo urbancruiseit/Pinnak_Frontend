@@ -6,9 +6,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SubmitHandler } from "react-hook-form";
 import { getAllCitiesThunk } from "@/app/features/travelcity/travelcitySlice";
-
+import {
+  fetchAllCities,
+  fetchStatesByCity,
+  resetStatesForCity,
+} from "../../../../features/State/stateSlice";
 import { useRouter } from "next/navigation";
-
+import {
+  searchCustomersThunk,
+  clearSearchResults,
+} from "../../../../features/NewCustomer/NewCustomerSlice";
 import {
   User,
   Mail,
@@ -22,6 +29,7 @@ import {
   Luggage,
   Globe,
   CheckCircle,
+  Building,
 } from "lucide-react";
 import type { LeadRecord } from "../../../../../types/types";
 import { createLead, fetchLeads } from "@/app/features/lead/leadSlice";
@@ -51,6 +59,8 @@ const schema = z.object({
   customerCategoryType: z.string().optional(),
   countryName: z.string().min(1, "Country is required"),
   customerCity: z.string().optional(),
+  customerState: z.string().optional(),
+  customerAddress: z.string().optional(),
   serviceType: z.string().optional(),
   tripType: z.string().optional(),
   occasion: z.string().optional(),
@@ -96,6 +106,12 @@ const LeadsForm: React.FC = () => {
   const { travelcity, loading } = useSelector(
     (state: RootState) => state.travelcity,
   );
+  const { cities, statesForCity, citiesLoading, statesLoading } = useSelector(
+    (state: RootState) => state.stateCity,
+  );
+  const { searchResults, searching, searchError } = useSelector(
+    (state: RootState) => state.newCustomer,
+  );
 
   const {
     register,
@@ -136,7 +152,9 @@ const LeadsForm: React.FC = () => {
   });
 
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
     phone: "",
     alternatePhone: "",
     email: "",
@@ -151,6 +169,9 @@ const LeadsForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentItinerary, setCurrentItinerary] = useState("");
   const [itineraryList, setItineraryList] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const [customerCategoryTypeValue, setCustomerCategoryTypeValue] =
     useState("");
@@ -164,8 +185,9 @@ const LeadsForm: React.FC = () => {
   const largebaggage = watch("largebaggage");
   const airportbaggage = watch("airportbaggage");
   const customerType = watch("customerType");
+  const customerCity = watch("customerCity");
   const serviceType = watch("serviceType");
-
+  const countryName = watch("countryName");
   const vehicle1 = watch("vehicles");
   const vehicle2 = watch("vehicle2");
   const vehicle3 = watch("vehicle3");
@@ -173,16 +195,34 @@ const LeadsForm: React.FC = () => {
   const qty2 = watch("vehicle2Quantity");
   const qty3 = watch("vehicle3Quantity");
 
+  // Fetch initial data
   useEffect(() => {
     dispatch(getCountriesThunk());
   }, [dispatch]);
+
   useEffect(() => {
     dispatch(getAllCitiesThunk());
   }, [dispatch]);
+
   useEffect(() => {
     dispatch(fetchVehicles());
   }, [dispatch]);
 
+  useEffect(() => {
+    dispatch(fetchAllCities());
+  }, [dispatch]);
+
+  // ✅ CORRECTED: Fetch states when city changes
+  useEffect(() => {
+    if (customerCity && customerCity !== "") {
+      dispatch(fetchStatesByCity(customerCity));
+    } else {
+      dispatch(resetStatesForCity());
+      setValue("customerState", "");
+    }
+  }, [customerCity, dispatch, setValue]);
+
+  // Set default country to India
   useEffect(() => {
     if (countries.length > 0) {
       const currentCountry = watch("countryName");
@@ -193,6 +233,7 @@ const LeadsForm: React.FC = () => {
     }
   }, [countries, setValue, watch]);
 
+  // Calculate total baggage
   useEffect(() => {
     const total =
       (Number(smallbaggage) || 0) +
@@ -202,6 +243,7 @@ const LeadsForm: React.FC = () => {
     setValue("totalbaggage", total);
   }, [smallbaggage, mediumbaggage, largebaggage, airportbaggage, setValue]);
 
+  // Calculate days based on service type and dates
   useEffect(() => {
     if (serviceType === "Pick & Drop") {
       setValue("days", 2);
@@ -225,6 +267,7 @@ const LeadsForm: React.FC = () => {
     }
   }, [serviceType, pickupDateTime, dropDateTime, setValue]);
 
+  // Combine vehicle requirements
   useEffect(() => {
     const vehiclesList: string[] = [];
     if (vehicle1 && vehicle1.trim() !== "" && qty1 && qty1.trim() !== "")
@@ -236,10 +279,37 @@ const LeadsForm: React.FC = () => {
     setValue("requirementVehicle", vehiclesList.join(", "));
   }, [vehicle1, vehicle2, vehicle3, qty1, qty2, qty3, setValue]);
 
+  // Set initial date
   useEffect(() => {
     const now = new Date();
     setValue("date", now.toISOString().slice(0, 16));
   }, [setValue]);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Search customers when debounced term changes
+  useEffect(() => {
+    if (debouncedTerm.length >= 2) {
+      dispatch(searchCustomersThunk(debouncedTerm));
+      setShowDropdown(true);
+    } else if (debouncedTerm.length === 0) {
+      dispatch(clearSearchResults());
+      setShowDropdown(false);
+    }
+  }, [debouncedTerm, dispatch]);
+
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setDebouncedTerm("");
+    dispatch(clearSearchResults());
+    setShowDropdown(false);
+  };
 
   const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -276,7 +346,9 @@ const LeadsForm: React.FC = () => {
 
   const resetFormFields = () => {
     setFormData({
-      name: "",
+      firstName: "",
+      middleName: "",
+      lastName: "",
       phone: "",
       alternatePhone: "",
       email: "",
@@ -286,6 +358,8 @@ const LeadsForm: React.FC = () => {
     setCurrentItinerary("");
     setCustomerCategoryTypeValue("");
     setAlternateCountryCode("+91");
+    setSearchTerm("");
+    setShowDropdown(false);
     reset({
       status: "-",
       pickupDateTime: new Date().toISOString().slice(0, 16),
@@ -305,10 +379,11 @@ const LeadsForm: React.FC = () => {
       dropDateTime: "",
       pickupAddress: "",
       dropAddress: "",
+      customerAddress: "",
       dropcity: "",
       pickupcity: "",
-      passengerTotal: undefined,
-      days: undefined,
+      passengerTotal: 0,
+      days: 0,
       km: "",
       petsNumber: 0,
       petsNames: "",
@@ -323,7 +398,37 @@ const LeadsForm: React.FC = () => {
       tripType: "",
       city: "",
       customerCity: "",
+      customerState: "",
     });
+  };
+
+  const handleSelectCustomer = (customer: any) => {
+    // Split customer name
+    const nameParts = customer.customerName?.split(" ") || [];
+    setFormData({
+      firstName: nameParts[0] || "",
+      middleName: nameParts.slice(1, -1).join(" ") || "",
+      lastName: nameParts[nameParts.length - 1] || "",
+      phone: customer.customerPhone?.replace(/\D/g, "").slice(-10) || "",
+      alternatePhone: customer.alternatePhone?.replace(/\D/g, "") || "",
+      email: customer.customerEmail || "",
+      companyName: customer.companyName || "",
+    });
+
+    // Set other customer data in form
+    if (customer.customerCity) setValue("customerCity", customer.customerCity);
+    if (customer.state) setValue("customerState", customer.state);
+    if (customer.address) setValue("customerAddress", customer.address);
+    if (customer.countryName) setValue("countryName", customer.countryName);
+    if (customer.customerType) setValue("customerType", customer.customerType);
+    if (customer.customerCategoryType) {
+      setValue("customerCategoryType", customer.customerCategoryType);
+      setCustomerCategoryTypeValue(customer.customerCategoryType);
+    }
+
+    dispatch(clearSearchResults());
+    setSearchTerm("");
+    setShowDropdown(false);
   };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -337,7 +442,10 @@ const LeadsForm: React.FC = () => {
         source: data.source || "",
         status: data.status || "-",
         telecaller: data.telesales || "Default",
-        customerName: formData.name || "",
+
+        firstName: formData.firstName || "",
+        middleName: formData.middleName || "",
+        lastName: formData.lastName || "",
         customerPhone: formData.phone ? `+91 ${formData.phone}` : "",
         alternatePhone: formData.alternatePhone
           ? `+${alternateCountryCode} ${formData.alternatePhone}`
@@ -356,6 +464,7 @@ const LeadsForm: React.FC = () => {
         dropDateTime: data.dropDateTime ? `${data.dropDateTime}:00` : null,
         pickupAddress: data.pickupAddress || "",
         dropAddress: data.dropAddress || "",
+        customerAddress: data.customerAddress || "",
         pickupcity: data.pickupcity || "",
         dropcity: data.dropcity || "",
         itinerary: itineraryList || [],
@@ -383,6 +492,7 @@ const LeadsForm: React.FC = () => {
         remarks: data.remarks || "",
         countryName: data.countryName || "",
         customerCity: data.customerCity || "",
+        customerState: data.customerState || "",
         city: data.city || "",
         message: "",
         lost_reason: (data as any).lost_reason || "",
@@ -398,7 +508,7 @@ const LeadsForm: React.FC = () => {
       dispatch(fetchLeads(1));
       window.dispatchEvent(new CustomEvent("leadSubmitted"));
 
-      // ✅ Navigate to lead table within the dashboard
+      // Navigate to lead table within the dashboard
       window.dispatchEvent(new CustomEvent("navigateToLeadTable"));
     } catch (error: any) {
       console.error("Submit Error:", error);
@@ -583,18 +693,132 @@ const LeadsForm: React.FC = () => {
 
           {/* SECTION 2: Customer Information */}
           <div className="border rounded-xl p-6 bg-green-50">
-            <h3 className="text-xl font-semibold text-green-800 mb-6 pb-3 border-b relative">
-              <span className="bg-green-600 text-white px-3 py-1 rounded-md mr-2">
-                2
-              </span>
-              Customer Information
-            </h3>
+            {/* Header with title and search box - side by side */}
+            <div className="flex justify-between items-center mb-6 pb-3 border-b">
+              <h3 className="text-xl font-semibold text-green-800 flex items-center">
+                <span className="bg-green-600 text-white px-3 py-1 rounded-md mr-2">
+                  2
+                </span>
+                Customer Information
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {/* Name */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search customers by name, email or phone..."
+                  className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent w-80"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() =>
+                    searchResults.length > 0 && setShowDropdown(true)
+                  }
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                />
+                <svg
+                  className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+
+                {/* Clear button - shows only when there's search term */}
+                {searchTerm && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Loading indicator */}
+                {searching && (
+                  <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg z-50 p-4 text-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600 mx-auto"></div>
+                    <span className="text-sm text-gray-500 ml-2">
+                      Searching...
+                    </span>
+                  </div>
+                )}
+
+                {/* Search Results Dropdown */}
+                {showDropdown && !searching && searchResults.length > 0 && (
+                  <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                    {searchResults.map((customer) => (
+                      <div
+                        key={customer.uuid}
+                        className="p-3 hover:bg-gray-100 cursor-pointer border-b transition-colors"
+                        onMouseDown={() => handleSelectCustomer(customer)}
+                      >
+                        <div className="font-semibold text-gray-800">
+                          {customer.customerName}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {customer.customerEmail && (
+                            <span>{customer.customerEmail} | </span>
+                          )}
+                          {customer.customerPhone}
+                        </div>
+                        {customer.companyName && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {customer.companyName}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* No results */}
+                {showDropdown &&
+                  !searching &&
+                  searchTerm.length >= 2 &&
+                  searchResults.length === 0 &&
+                  !searchError && (
+                    <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg z-50 p-4 text-center text-gray-500">
+                      No customers found for "{searchTerm}"
+                    </div>
+                  )}
+
+                {/* Error state */}
+                {searchError && (
+                  <div className="absolute top-full mt-2 w-full bg-red-50 border border-red-200 rounded-lg shadow-lg z-50 p-3 text-center">
+                    <p className="text-red-600 text-sm">{searchError}</p>
+                    <button
+                      onClick={handleClearSearch}
+                      className="mt-2 text-sm text-red-700 hover:text-red-900"
+                    >
+                      Clear and try again
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+              {/* First Name */}
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
-                  Name <span className="text-red-500">*</span>
+                  First Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
                   <Info
@@ -602,13 +826,13 @@ const LeadsForm: React.FC = () => {
                     className="absolute -top-4 right-0 text-blue-500 cursor-help"
                   />
                   <input
-                    name="name"
-                    value={formData.name}
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleFieldChange}
-                    onBlur={() => markFieldTouched("name")}
-                    className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onBlur={() => markFieldTouched("firstName")}
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     maxLength={50}
-                    placeholder="Enter Customer name"
+                    placeholder="Enter Customer first name"
                     required
                   />
                   <User
@@ -618,13 +842,66 @@ const LeadsForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Phone India */}
+              {/* Middle Name */}
+              <div>
+                <label className="block text-md font-extrabold text-gray-700 mb-1">
+                  Middle Name
+                </label>
+                <div className="relative group">
+                  <Info
+                    size={15}
+                    className="absolute -top-4 right-0 text-blue-500 cursor-help"
+                  />
+                  <input
+                    name="middleName"
+                    value={formData.middleName}
+                    onChange={handleFieldChange}
+                    onBlur={() => markFieldTouched("middleName")}
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={50}
+                    placeholder="Enter Customer middle name"
+                  />
+                  <User
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600"
+                    size={20}
+                  />
+                </div>
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <label className="block text-md font-extrabold text-gray-700 mb-1">
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Info
+                    size={15}
+                    className="absolute -top-4 right-0 text-blue-500 cursor-help"
+                  />
+                  <input
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleFieldChange}
+                    onBlur={() => markFieldTouched("lastName")}
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={50}
+                    placeholder="Enter Customer last name"
+                    required
+                  />
+                  <User
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600"
+                    size={20}
+                  />
+                </div>
+              </div>
+
+              {/* Phone No. (India) */}
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Phone No. (India) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center border border-gray-300 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-                  <div className="bg-gray-100 px-2 py-2 text-sm font-medium min-w-[100px]">
+                  <div className="bg-gray-100 px-3 py-2 text-sm font-medium min-w-[80px] text-center">
                     +91 IND
                   </div>
                   <input
@@ -644,7 +921,7 @@ const LeadsForm: React.FC = () => {
                         },
                       });
                     }}
-                    placeholder="Enter phone number"
+                    placeholder="Enter 10 digit number"
                     className="w-full py-2 px-3 outline-none"
                     maxLength={10}
                     inputMode="numeric"
@@ -668,7 +945,7 @@ const LeadsForm: React.FC = () => {
                     onChange={(e) => setAlternateCountryCode(e.target.value)}
                     className="bg-gray-100 px-2 py-2 outline-none text-sm cursor-pointer min-w-[100px]"
                   >
-                    <option value="">Select </option>
+                    <option value="">Select Code</option>
                     {countries.map((code) => (
                       <option key={code.id} value={code.country_code}>
                         {code.country_code} {code.phone_code}
@@ -721,7 +998,7 @@ const LeadsForm: React.FC = () => {
                     onChange={handleFieldChange}
                     onBlur={() => markFieldTouched("email")}
                     placeholder="Enter email address"
-                    className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     maxLength={100}
                   />
                   <Mail
@@ -730,9 +1007,7 @@ const LeadsForm: React.FC = () => {
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Customer Category */}
               <div className="w-full">
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
@@ -754,7 +1029,7 @@ const LeadsForm: React.FC = () => {
                         setFormData((prev) => ({ ...prev, companyName: "" }));
                       }
                     }}
-                    className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Customer Category</option>
                     <option value="Personal">Personal</option>
@@ -786,7 +1061,7 @@ const LeadsForm: React.FC = () => {
                       register("customerCategoryType").onChange(e);
                       setCustomerCategoryTypeValue(e.target.value);
                     }}
-                    className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Customer Type</option>
                     {customerType &&
@@ -819,11 +1094,11 @@ const LeadsForm: React.FC = () => {
                       value={formData.companyName}
                       onChange={handleFieldChange}
                       onBlur={() => markFieldTouched("companyName")}
-                      className="w-full px-12 py-2 border bg-white border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-10 pr-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       maxLength={100}
                       placeholder="Enter company name"
                     />
-                    <User
+                    <Building
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600"
                       size={20}
                     />
@@ -871,32 +1146,92 @@ const LeadsForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Customer City */}
-              <div className="w-full">
-                <label className="block text-md font-extrabold text-gray-700 mb-1">
-                  Customer City
-                </label>
-                <div className="relative group">
-                  <Info
-                    size={15}
-                    className="absolute -top-4 right-0 text-blue-500 cursor-help z-10"
-                  />
-                  <select
-                    {...register("customerCity")}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">Select Customer City</option>
-                    {travelcity?.map((city) => (
-                      <option key={city.id || city.uuid} value={city.cityName}>
-                        {city.cityName}
+              {/* Customer City - Only show for India */}
+              {countryName === "India" && (
+                <div className="w-full">
+                  <label className="block text-md font-extrabold text-gray-700 mb-1">
+                    Customer City
+                  </label>
+                  <div className="relative group">
+                    <Info
+                      size={15}
+                      className="absolute -top-4 right-0 text-blue-500 cursor-help z-10"
+                    />
+                    <select
+                      {...register("customerCity")}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      disabled={citiesLoading}
+                    >
+                      <option value="">
+                        {citiesLoading
+                          ? "Loading cities..."
+                          : "Select Customer City"}
                       </option>
-                    ))}
-                  </select>
-                  <Globe
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
-                    size={20}
-                  />
+                      {cities?.map((city) => (
+                        <option
+                          key={city.id || city.uuid}
+                          value={city.cityName}
+                        >
+                          {city.cityName}
+                        </option>
+                      ))}
+                    </select>
+                    <Globe
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
+                      size={20}
+                    />
+                  </div>
                 </div>
+              )}
+
+              {/* Customer State - Only show for India */}
+              {countryName === "India" && (
+                <div className="w-full">
+                  <label className="block text-md font-extrabold text-gray-700 mb-1">
+                    Customer State
+                  </label>
+                  <div className="relative group">
+                    <Info
+                      size={15}
+                      className="absolute -top-4 right-0 text-blue-500 cursor-help z-10"
+                    />
+                    <select
+                      {...register("customerState")}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      disabled={!customerCity || statesLoading}
+                    >
+                      <option value="">
+                        {!customerCity
+                          ? "Please select a city first"
+                          : statesLoading
+                            ? "Loading states..."
+                            : "Select Customer State"}
+                      </option>
+                      {statesForCity?.map((state) => (
+                        <option key={state.id} value={state.stateName}>
+                          {state.stateName}
+                        </option>
+                      ))}
+                    </select>
+                    <Globe
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
+                      size={20}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Address */}
+              <div className="w-full">
+                <label className="block mb-1 font-extrabold text-gray-700 text-md">
+                  Customer Address
+                </label>
+                <textarea
+                  {...register("customerAddress")}
+                  className="w-full py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter complete customer address"
+                  rows={2}
+                />
               </div>
             </div>
           </div>

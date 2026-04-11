@@ -227,7 +227,7 @@ export default function Dashboard() {
       {/* My Day Panel */}
       <div className="bg-blue-600 text-white p-6 rounded-lg shadow-lg mb-6">
         <h2 className="text-2xl font-bold mb-4">
-          Today! What's my plan As a Team Leader Sristi{" "}
+          Today! What's my plan As a City Manager Sristi{" "}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-white bg-opacity-20 p-4 rounded text-black">

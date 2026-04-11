@@ -90,6 +90,7 @@ export interface LeadRecord {
     | "Pick & Drop"
     | "Round Trip"
     | "Long Term Lease"
+    | "Round Trip Drop"
     | "Wedding"
     | "Vacation"
     | "Pilgrimage"
@@ -103,7 +104,7 @@ export interface LeadRecord {
   dropAddress?: string;
   itinerary?: string[];
   vehicles?: string;
-  alternatePhone?: string;   
+  alternatePhone?: string;
   vehiclevehicle2?: string;
   vehiclevehicle3?: string;
   passengerTotal: number;
@@ -116,18 +117,20 @@ export interface LeadRecord {
   largeBaggage?: number;
   airportBaggage?: number;
   totalBaggage?: number;
-  remarks?: string;   
+  remarks?: string;
   message?: string;
   lost_reason?: string;
   totalPages: Number;
   countryName?: string;
   lostReasonDetails?: string;
   followUp?: string;
-  customerCity?:string;
-  vehicle3Quantity?:string;
-   vehicle2Quantity?:string;
-    vehicle1Quantity?:string;
-    unwanted_status?: "wanted" | "unwanted";
+  customerCity?: string;
+  vehicle3Quantity?: number;
+  vehicle2Quantity?: number;
+  vehicle1Quantity?: number;
+  unwanted_status?: "wanted" | "unwanted";
+  state?: string;
+  customercity?: string;
 }
 export type UserRole =
   | "user"
@@ -142,6 +145,7 @@ export interface User {
   name: string;
   email: string;
   password: string;
+  subdepartname_name: string;
   role: UserRole;
   data?: any;
   uuid: string;
@@ -157,7 +161,7 @@ export interface User {
 }
 
 export interface countryData {
-  id: number;
+  id?: number;
   country_name: string;
   country_code: string;
   phone_code: string;
@@ -190,12 +194,9 @@ export interface State {
   stateName: string;
 }
 
-
-
 export interface CustomerRecord {
   // Personal Info
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   phone: string;
   dateOfBirth: string;

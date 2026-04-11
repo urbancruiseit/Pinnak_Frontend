@@ -187,9 +187,9 @@ export const useLeadColumns = ({
 
               <button
                 onClick={(e) => handleUnwantedClick(lead, e)}
-                className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600"
+                className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600 flex items-center justify-center"
               >
-                ❌
+                <span className="text-white">✕</span>
               </button>
               <button
                 onClick={(e) => {
@@ -416,7 +416,7 @@ export const useLeadColumns = ({
         }
 
         // Customer Name Column
-        if (col.key === "customerName") {
+        if (col.key === "fullName") {
           return (
             <div className="relative group cursor-pointer">
               <span className="font-semibold text-slate-800 hover:text-blue-600 transition-colors">

@@ -76,7 +76,7 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.currentUser = action.payload;
-        }
+        },
       )
       .addCase(loginUserThunk.rejected, (state, action) => {
         state.loading = false;
@@ -92,7 +92,7 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.currentUser = action.payload;
-        }
+        },
       )
       .addCase(currentUserThunk.rejected, (state, action) => {
         state.loading = false;
@@ -110,7 +110,7 @@ const userSlice = createSlice({
         (state, action: PayloadAction<User>) => {
           state.loading = false;
           state.createdUser = action.payload;
-        }
+        },
       )
       .addCase(createUserThunk.rejected, (state, action) => {
         state.loading = false;

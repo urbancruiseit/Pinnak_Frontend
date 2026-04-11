@@ -3,6 +3,7 @@ import { getAllCitiesApi, getStatesByCityApi } from "./stateApi";
 
 export interface CityType {
   id: number;
+  uuid?: string;
   cityName: string;
 }
 
@@ -33,7 +34,7 @@ export const fetchAllCities = createAsyncThunk(
   async () => {
     const data = await getAllCitiesApi();
     return data;
-  }
+  },
 );
 
 // ─── City ke basis pe states fetch ─────────────────────────────────────────
@@ -42,7 +43,7 @@ export const fetchStatesByCity = createAsyncThunk(
   async (cityName: string) => {
     const data = await getStatesByCityApi(cityName);
     return data;
-  }
+  },
 );
 
 const stateCitySlice = createSlice({

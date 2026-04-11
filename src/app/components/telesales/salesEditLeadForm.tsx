@@ -61,9 +61,10 @@ type ToastType = "success" | "error";
 
 const SalesEditLeadForm: React.FC<{
   initialData: LeadRecord;
+  isEditMode?: boolean;
   onSuccess?: () => void;
   onCancel?: () => void;
-}> = ({ initialData, onSuccess, onCancel }) => {
+}> = ({ initialData, isEditMode, onSuccess, onCancel }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { countries } = useSelector((state: RootState) => state.country);
   const { vehicleCodes } = useSelector((state: RootState) => state.vehicle);

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -8,174 +7,366 @@ import { loginUserThunk } from "../features/user/userSlice";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../redux/store";
 import Image from "next/image";
-import pinnak from "../assets/pinnak.png";
-import userPic from "../assets/user-pic.png";
+import { clsx } from "clsx"; // or your preferred cn utility
+
+import pinaakLogo from "@/app/assets/pinnak.png";
+import urbanlogo from "@/app/assets/urbanlogo.png";
+
+import {
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 
 type LoginFormValues = {
   email: string;
   password: string;
 };
 
+// Simple cn helper if you don't have one
+const cn = (...classes: (string | boolean | undefined | null)[]) =>
+  classes.filter(Boolean).join(" ");
+
 export function Login() {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string>("");
-
   const dispatch = useDispatch<AppDispatch>();
+
+  const [serverError, setServerError] = useState(""); // ✅ fixed name
+  const [showPw, setShowPw] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    reset,
-  } = useForm<LoginFormValues>({
-    mode: "onBlur",
-    defaultValues: { email: "", password: "" },
-  });
+  } = useForm<LoginFormValues>();
 
   const onSubmit = async (values: LoginFormValues) => {
     setServerError("");
     try {
       const result = await dispatch(loginUserThunk(values)).unwrap();
-      if (result) {
-        reset();
-        router.push("/dashboard");
-      }
+      if (result) router.push("/dashboard");
     } catch (err: any) {
-      setServerError(err || "Login failed");
+      setServerError(err || "Network Error");
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-      {/* Background Effects */}
-      <div className="absolute top-0 -left-40 h-96 w-96 rounded-full bg-green-300/40 blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-0 -right-40 h-96 w-96 rounded-full bg-emerald-300/40 blur-3xl animate-pulse animation-delay-1000"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-80 w-80 rounded-full bg-teal-300/30 blur-3xl"></div>
-
-      {/* Floating Icons */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-20 left-10 text-4xl animate-float">📊</div>
-        <div className="absolute bottom-32 right-20 text-5xl animate-float animation-delay-2000">
-          🎯
-        </div>
-        <div className="absolute top-1/3 right-1/4 text-4xl animate-float animation-delay-1500">
-          ⚡
-        </div>
-        <div className="absolute bottom-1/4 left-1/3 text-5xl animate-float animation-delay-2500">
-          📈
-        </div>
-        <div className="absolute top-1/2 right-10 text-3xl animate-float animation-delay-3000">
-          🤝
-        </div>
+    <main className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-green-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-700" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            {/* LEFT SIDE */}
-            <div className="flex flex-col items-center justify-start rounded-l-3xl bg-gradient-to-br from-green-400/20 via-emerald-400/20 to-teal-400/20 p-8 backdrop-blur-sm border border-green-200/50 shadow-xl">
-              {/* Logo TOP CENTER */}
-              <div className="flex justify-center  ">
-                <div className="relative   ">
-                  <Image
-                    src={pinnak}
-                    alt="Pinnak Logo"
-                    className="object-contain"
-                  />
+      <div className="w-full max-w-7xl relative z-10">
+        <div className="relative w-full min-h-[75vh] bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-3xl shadow-2xl flex">
+          {/* LEFT SECTION */}
+          <section className="w-1/2 bg-gradient-to-br from-green-600 via-green-500 to-emerald-500 text-white flex flex-col justify-between relative overflow-hidden p-12 rounded-l-3xl">
+            <div className="absolute inset-0 opacity-10">
+              <svg
+                className="w-full h-full"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <pattern
+                    id="grid"
+                    patternUnits="userSpaceOnUse"
+                    width="20"
+                    height="20"
+                  >
+                    <path
+                      d="M 20 0 L 0 0 0 20"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="0.5"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="100" height="100" fill="url(#grid)" />
+              </svg>
+            </div>
+
+            <div className="absolute inset-0 opacity-30">
+              <div className="absolute top-10 left-10 w-40 h-40 bg-white rounded-full mix-blend-overlay filter blur-xl animate-blob" />
+              <div className="absolute bottom-10 right-10 w-40 h-40 bg-green-300 rounded-full mix-blend-overlay filter blur-xl animate-blob animation-delay-2000" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-emerald-300 rounded-full mix-blend-overlay filter blur-xl animate-blob animation-delay-4000" />
+            </div>
+
+            <div className="relative z-10 flex flex-col h-full gap-8">
+              <div className="flex-1 flex items-center justify-center">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-white/30 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                  <div
+                    className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border-4 border-white/30 bg-white transform group-hover:scale-105 transition-all duration-500 animate-float"
+                    style={{ aspectRatio: "4/3" }}
+                  >
+                    <Image
+                      src={pinaakLogo}
+                      alt="Pinaak Logo"
+                      className="w-full h-full object-contain p-6 drop-shadow-2xl"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4 text-center">
-                <p className="text-base text-gray-700 md:text-lg leading-relaxed">
-                  Transform your sales pipeline with intelligent lead scoring,
-                  automated follow-ups, and predictive analytics. Pinnak helps
-                  you convert more leads into loyal customers.
-                </p>
-              </div>
-            </div>
-
-            {/* RIGHT SIDE */}
-            <div className="flex items-center justify-center rounded-r-3xl bg-white/80 backdrop-blur-xl shadow-2xl border border-green-200">
-              <div className="w-full max-w-md p-8 lg:p-12">
-                <div className="mb-8 text-center">
-                  <div className="relative mx-auto mb-4 overflow-hidden">
-                    <Image
-                      src={userPic}
-                      alt="User Profile"
-                      width={100}
-                      height={80}
-                    />
+              <div className="space-y-6">
+                <div className="text-center flex flex-col items-center gap-2">
+                  {/* First Container */}
+                  <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm">
+                    <Sparkles size={16} />
+                    <p className="text-white text-md font-medium">
+                      Sales and Operational System
+                    </p>
                   </div>
 
-                  <h2 className="text-2xl font-bold text-gray-800 mt-4">
-                    Welcome Back
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-600">
-                    Sign in to manage your leads and pipeline
+                  {/* Second Container (Next Line) */}
+                  <div className="inline-flex bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm">
+                    <p className="text-sm text-white font-light tracking-wide">
+                      Urban Cruise
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {[
+                    "Leads",
+                    "Booking",
+                    "Trip",
+                    "Feedback",
+                    "Vendors",
+                    "Drivers",
+                  ].map((tag, index) => (
+                    <span
+                      key={tag}
+                      className="px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="text-center pt-8">
+                  <p className="text-sm text-white font-light tracking-wide">
+                    © 2026 PINAAK. All rights reserved.
+                  </p>
+                  <p className="text-sm text-white mt-1">
+                    Powered by{" "}
+                    <span className="font-bold text-md">Urban Cruise</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* RIGHT SECTION */}
+          <section className="w-1/2 flex items-center justify-center bg-white rounded-r-3xl relative overflow-visible">
+            <div className="w-full max-w-md space-y-3 pt-48">
+              <div className="flex justify-center items-center">
+                <div className="absolute top-16 left-2/4 -translate-x-2/4 -translate-y-2/4 w-full max-w-md">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-[0px_0px_25px_10px_rgba(0,0,0,0.1)] p-5">
+                    <Image
+                      src={urbanlogo}
+                      alt="Urban Cruise"
+                      className="h-64 w-full object-contain drop-shadow-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+                  Welcome to Pinaak
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-base flex items-center gap-2">
+                  <span>Sign in to your workspace</span>
+                  <ArrowRight
+                    size={16}
+                    className="text-green-600 animate-bounce-x"
+                  />
+                </p>
+              </div>
+
+              {/* ✅ Fixed: serverError instead of error */}
+              {serverError && (
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-xl blur-xl transition-all group-hover:blur-2xl" />
+                  <div className="relative flex items-center gap-3 rounded-xl px-4 py-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-red-200 dark:border-red-900/50 shadow-lg">
+                    <AlertCircle
+                      size={18}
+                      className="text-red-500 flex-shrink-0"
+                    />
+                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                      {serverError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ Fixed: handleSubmit(onSubmit) */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="text-md font-semibold text-black  ml-1">
+                    Email
+                  </label>
+                  <div className="relative group">
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-gradient-to-r from-green-600/20 to-emerald-500/20 rounded-xl blur-xl transition-all duration-500",
+                        focusedField === "email"
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-50",
+                      )}
+                    />
+                    <div className="relative flex items-center">
+                      <User
+                        size={18}
+                        className={cn(
+                          "absolute left-4 transition-all duration-300",
+                          focusedField === "email"
+                            ? "text-green-600"
+                            : "text-gray-400",
+                        )}
+                      />
+                      <input
+                        type="email"
+                        {...register("email", {
+                          required: "Email is required",
+                        })} // ✅ react-hook-form register
+                        onFocus={() => setFocusedField("email")}
+                        onBlur={() => setFocusedField(null)}
+                        placeholder="Enter your email"
+                        disabled={isSubmitting}
+                        className="w-full pl-11 pr-4 h-12 rounded-xl border  bg-white  text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <label className="text-md font-semibold text-black  ml-1">
+                    Password
+                  </label>
+                  <div className="relative group">
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-gradient-to-r from-green-600/20 to-emerald-500/20 rounded-xl blur-xl transition-all duration-500",
+                        focusedField === "password"
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-50",
+                      )}
+                    />
+                    <div className="relative flex items-center">
+                      <Lock
+                        size={18}
+                        className={cn(
+                          "absolute left-4 transition-all duration-300",
+                          focusedField === "password"
+                            ? "text-green-600"
+                            : "text-gray-400",
+                        )}
+                      />
+                      <input
+                        type={showPw ? "text" : "password"}
+                        {...register("password", {
+                          required: "Password is required",
+                        })} // ✅ react-hook-form register
+                        onFocus={() => setFocusedField("password")}
+                        onBlur={() => setFocusedField(null)}
+                        placeholder="••••••••"
+                        disabled={isSubmitting}
+                        className="w-full pl-11 pr-4 h-12 rounded-xl border  bg-white  text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw((v) => !v)}
+                        disabled={isSubmitting}
+                        className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center">
+                  <p className="text-sm text-green-600 font-medium">
+                    Please contact HR to reset your password.
                   </p>
                 </div>
 
-                {serverError && (
-                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-                    {serverError}
-                  </div>
-                )}
-
-                <form
-                  className="space-y-5"
-                  onSubmit={handleSubmit(onSubmit)}
-                  noValidate
+                {/* ✅ Fixed: isSubmitting instead of loading */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="relative w-full group"
                 >
-                  {/* EMAIL */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="you@company.com"
-                      className={`w-full rounded-xl border px-4 py-3 ${
-                        errors.email ? "border-red-400" : "border-green-200"
-                      }`}
-                      {...register("email", { required: "Email is required" })}
-                    />
+                  <div className="relative h-12 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 text-white font-semibold text-sm overflow-hidden">
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    <span className="relative flex items-center justify-center gap-2 h-full">
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          <span>Signing in...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Sign In</span>
+                          <ArrowRight
+                            size={16}
+                            className="group-hover:translate-x-1 transition-transform"
+                          />
+                        </>
+                      )}
+                    </span>
                   </div>
-
-                  {/* PASSWORD */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Enter your password"
-                      className={`w-full rounded-xl border px-4 py-3 ${
-                        errors.password ? "border-red-400" : "border-green-200"
-                      }`}
-                      {...register("password", {
-                        required: "Password is required",
-                      })}
-                    />
-                  </div>
-
-                  {/* BUTTON */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3 text-white font-semibold"
-                  >
-                    {isSubmitting ? "Signing in..." : "Sign In"}
-                  </button>
-                </form>
-
-                <div className="mt-6 text-center text-xs text-gray-500">
-                  © {new Date().getFullYear()} Pinnak
-                </div>
-              </div>
+                </button>
+              </form>
             </div>
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        @keyframes bounce-x {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(5px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-blob { animation: blob 7s infinite; }
+        .animate-bounce-x { animation: bounce-x 1.5s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+      `}</style>
+    </main>
   );
 }

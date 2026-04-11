@@ -9,7 +9,6 @@ import { Admin } from "../components/admin";
 import { Access } from "../components/Access/accesslevel";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../redux/store";
-import { useSearchParams } from "next/navigation";
 import { currentUserThunk } from "../features/user/userSlice";
 import type { LeadRecord } from "@/types/types";
 
@@ -26,17 +25,20 @@ type SidebarSection =
 
 type MasterKey =
   | "vendor"
+  | "vendor-table"
   | "vehicles"
   | "vehicle-category"
   | "vehicle-registration"
   | "vehicle-add"
   | "driver"
+  | "driver-table"
   | "employee"
   | "hr"
   | "city"
   | "corporate-form"
   | "corporate-event"
   | "customer-personal"
+  | "customer-table"
   | "rate-quotation"
   | "card-reel"
   | "quotation-pdf"
@@ -50,16 +52,14 @@ type LeadView =
   | "lead-form"
   | "lead-table"
   | "sale-lead-table"
-  | "sales-edit-form"
-  | "tl-tables";
+  | "sales-edit-form";
 
 type DashboardView =
   | "leads-dashboard"
   | "presales-dashboard"
-  | "citymanager-dashboard"
-  | "bdm-dashboard"
+  | "telesales-dashboard"
   | "teamleader-dashboard"
-  | "salesteam-dashboard";
+  | "citymanager-dashboard";
 
 interface MasterTab {
   key: MasterKey;
@@ -98,7 +98,7 @@ const LeadTableModule = dynamic(
 ) as React.ComponentType<{ selectedRegion?: string; selectedCity?: string }>;
 
 const LeadSaleTableModule = dynamic(
-  () => import("../components/salesteam/saleleadable"),
+  () => import("../components/telesales/saleleadable"),
   {
     ssr: false,
     loading: LoadingPanel,
@@ -113,14 +113,6 @@ const EditLeadFormModule = dynamic(
   },
 );
 
-const TeamLeaderLeadTableModule = dynamic(
-  () => import("../components/pages/teamleader/teamleaderleadtable"),
-  {
-    ssr: false,
-    loading: LoadingPanel,
-  },
-);
-
 const PresalesDashboardModule = dynamic(
   () => import("../components/presalesteam/dashboardpresales"),
   {
@@ -129,7 +121,15 @@ const PresalesDashboardModule = dynamic(
   },
 );
 
-const TeamleaderDashboardModule = dynamic(
+const SalesTeamDashboardModule = dynamic(
+  () => import("../components/telesales/telesalesdahboard"),
+  {
+    ssr: false,
+    loading: LoadingPanel,
+  },
+);
+
+const TeamLeaderDashboardModule = dynamic(
   () => import("../components/pages/teamleader/teamleaderdashboard"),
   {
     ssr: false,
@@ -137,16 +137,8 @@ const TeamleaderDashboardModule = dynamic(
   },
 );
 
-const BdmDashboardModule = dynamic(
-  () => import("../components/bdmdash/bdmtemadash"),
-  {
-    ssr: false,
-    loading: LoadingPanel,
-  },
-);
-
-const SalesTeamDashboardModule = dynamic(
-  () => import("../components/salesteam/dashtemaadash"),
+const CityManagerDashboardModule = dynamic(
+  () => import("../components/citymanger/citymanagerdashboard"),
   {
     ssr: false,
     loading: LoadingPanel,
@@ -166,40 +158,47 @@ const masterTabs: MasterTab[] = [
     key: "vendor",
     label: "Vendor Master",
     component: dynamic(
-      () => import("../components/masterform.tsx/VendorFormData"),
+      () => import("../components/Master/Vendor/VendorFormData"),
       {
         ssr: false,
         loading: LoadingPanel,
       },
     ),
   },
+
   {
-    key: "vehicles",
-    label: "Vehicles Master",
+    key: "vendor-table",
+    label: "Vendor Table",
     component: dynamic(
-      () => import("../components/masterform.tsx/vehiclesmaster"),
+      () => import("../components/Master/Vendor/vendortable"),
       {
         ssr: false,
         loading: LoadingPanel,
       },
     ),
+  },
+
+  {
+    key: "vehicles",
+    label: "Vehicles Master",
+    component: dynamic(() => import("../components/Master/vehiclesmaster"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
   {
     key: "vehicle-category",
     label: "Vehicle Category",
-    component: dynamic(
-      () => import("../components/masterform.tsx/vehiclecategory"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/vehiclecategory"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
   {
     key: "vehicle-registration",
     label: "Vehicle Registration",
     component: dynamic(
-      () => import("../components/masterform.tsx/Vehicleregistration"),
+      () => import("../components/Master/Vehicleregistration"),
       {
         ssr: false,
         loading: LoadingPanel,
@@ -209,19 +208,16 @@ const masterTabs: MasterTab[] = [
   {
     key: "vehicle-add",
     label: "Vehicle Add Form",
-    component: dynamic(
-      () => import("../components/masterform.tsx/Vehicleaddform"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/Vehicleaddform"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
   {
     key: "driver",
     label: "Driver Master",
     component: dynamic(
-      () => import("../components/masterform.tsx/DriverFormData"),
+      () => import("../components/Master/Driver/DriverFormData"),
       {
         ssr: false,
         loading: LoadingPanel,
@@ -231,15 +227,11 @@ const masterTabs: MasterTab[] = [
   {
     key: "employee",
     label: "Employee Master",
-    component: dynamic(
-      () => import("../components/masterform.tsx/EmployeeFormData"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/EmployeeFormData"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
-
   {
     key: "city",
     label: "City Master",
@@ -251,30 +243,41 @@ const masterTabs: MasterTab[] = [
   {
     key: "corporate-form",
     label: "Corporate Form",
-    component: dynamic(
-      () => import("../components/masterform.tsx/coprateform"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/coprateform"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
-  {
-    key: "corporate-event",
-    label: "Corporate Event",
-    component: dynamic(
-      () => import("../components/masterform.tsx/corporatevent"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
-  },
+
   {
     key: "customer-personal",
     label: "Customer Personal",
     component: dynamic(
-      () => import("../components/masterform.tsx/CUSTOMER/customerpersonal"),
+      () => import("../components/Master/Customer/customerpersonal"),
+      {
+        ssr: false,
+        loading: LoadingPanel,
+      },
+    ),
+  },
+
+  {
+    key: "customer-table",
+    label: "Customer Table",
+    component: dynamic(
+      () => import("../components/Master/Customer/customertable"),
+      {
+        ssr: false,
+        loading: LoadingPanel,
+      },
+    ),
+  },
+
+  {
+    key: "driver-table",
+    label: "Driver Table",
+    component: dynamic(
+      () => import("../components/Master/Driver/drivertable"),
       {
         ssr: false,
         loading: LoadingPanel,
@@ -284,7 +287,7 @@ const masterTabs: MasterTab[] = [
   {
     key: "card-reel",
     label: "Card Reel",
-    component: dynamic(() => import("../components/masterform.tsx/cardreel"), {
+    component: dynamic(() => import("../components/Master/cardreel"), {
       ssr: false,
       loading: LoadingPanel,
     }),
@@ -292,24 +295,18 @@ const masterTabs: MasterTab[] = [
   {
     key: "quotation-pdf",
     label: "Quotation PDF",
-    component: dynamic(
-      () => import("../components/masterform.tsx/quotationPdf"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/quotationPdf"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
   {
     key: "country-code",
     label: "Country Code",
-    component: dynamic(
-      () => import("../components/masterform.tsx/countrycode"),
-      {
-        ssr: false,
-        loading: LoadingPanel,
-      },
-    ),
+    component: dynamic(() => import("../components/Master/countrycode"), {
+      ssr: false,
+      loading: LoadingPanel,
+    }),
   },
   {
     key: "zone",
@@ -333,29 +330,6 @@ export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState<SidebarSection>("leads");
   const [activeMaster, setActiveMaster] = useState<MasterKey>("vendor");
   const [activeLeadView, setActiveLeadView] = useState<LeadView>("dashboard");
-
-  const getDefaultDashboard = (role: string): DashboardView => {
-    const normalizedRole = role.toLowerCase().trim();
-    switch (normalizedRole) {
-      case "presales":
-      case "presale":
-        return "presales-dashboard";
-      case "bdm":
-        return "bdm-dashboard";
-      case "sales":
-        return "salesteam-dashboard";
-      case "city manager":
-      case "citymanager":
-        return "citymanager-dashboard";
-      case "team leader":
-      case "teamleader":
-      case "team_leader":
-        return "teamleader-dashboard";
-      default:
-        return "leads-dashboard";
-    }
-  };
-
   const [activeDashboardView, setActiveDashboardView] =
     useState<DashboardView>("leads-dashboard");
   const [pendingModuleKey, setPendingModuleKey] = useState<string | null>(null);
@@ -367,12 +341,13 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
+  const [userSubDepartment, setUserSubDepartment] = useState<string>("");
+  const [userDepartment, setUserDepartment] = useState<string>("");
   const [selectedLeadForEdit, setSelectedLeadForEdit] =
     useState<LeadRecord | null>(null);
   const [selectedLeadForRateQuotation, setSelectedLeadForRateQuotation] =
     useState<LeadRecord | null>(null);
 
-  // Helper function to reset all report/feature states
   const resetAllReportStates = () => {};
 
   const dispatch = useDispatch<AppDispatch>();
@@ -382,40 +357,68 @@ export default function DashboardPage() {
     dispatch(currentUserThunk());
   }, [dispatch]);
 
+  // Handle URL search params for tab navigation
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) {
+        setActiveSection("master");
+        setActiveMaster(tab as MasterKey);
+      }
+    }
+  }, []);
+
+  // Simplified role detection logic
   useEffect(() => {
     if (currentUser) {
-      const role = currentUser.role || "user";
+      const userAny = currentUser as any;
+
+      const role = userAny.role || userAny.role_name || "user";
+      const subDepartment_name =
+        userAny.subDepartment_name ||
+        userAny.subdepartname_name ||
+        userAny.department ||
+        "";
+      const departmentName =
+        userAny.department_name || userAny.departmentname || "";
+
       setUserRole(role);
       setUserName(currentUser.name || "User");
       setUserEmail(currentUser.email || "");
+      setUserSubDepartment(subDepartment_name);
+      setUserDepartment(departmentName);
 
-      // Set the default dashboard view based on role
-      const defaultDashboard = getDefaultDashboard(role);
-      setActiveDashboardView(defaultDashboard);
+      const isTelesales = subDepartment_name?.toLowerCase() === "tele-sales";
+      const isPresales = subDepartment_name?.toLowerCase() === "pre-sales";
+      const isTeamLeaderSales =
+        isTelesales && role?.toLowerCase().includes("team leader");
+      const isCityManager =
+        isTelesales && role?.toLowerCase().includes("city manager");
 
-      // If Sales or Presales role (case insensitive), also set the active section to dashboard
-      const lowerRole = role.toLowerCase().trim();
-      if (
-        lowerRole === "sales" ||
-        lowerRole === "presale" ||
-        lowerRole === "presales" ||
-        lowerRole === "team leader" ||
-        lowerRole === "teamleader" ||
-        lowerRole === "team_leader" ||
-        lowerRole === "bdm" ||
-        lowerRole === "city manager" ||
-        lowerRole === "citymanager"
-      ) {
+      if (isTeamLeaderSales) {
         setActiveSection("dashboard");
-        // Ensure presales users always get presales-dashboard view
-        if (lowerRole === "presale" || lowerRole === "presales") {
-          setActiveDashboardView("presales-dashboard");
-        }
+        setActiveDashboardView("teamleader-dashboard");
+      } else if (isCityManager) {
+        setActiveSection("dashboard");
+        setActiveDashboardView("citymanager-dashboard");
+      } else if (isTelesales) {
+        setActiveSection("dashboard");
+        setActiveDashboardView("telesales-dashboard");
+      } else if (isPresales) {
+        setActiveSection("dashboard");
+        setActiveDashboardView("presales-dashboard");
+      } else {
+        setActiveSection("leads");
+        setActiveLeadView("dashboard");
+        setActiveDashboardView("leads-dashboard");
       }
+
+      setPendingModuleKey(null);
+      resetAllReportStates();
     }
   }, [currentUser]);
 
-  // Listen for lead selection events from LeadSaleTableModule
   useEffect(() => {
     const handleViewLead = (event: CustomEvent<LeadRecord>) => {
       const lead = event.detail;
@@ -433,7 +436,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // Listen for navigateToLeadTable event from LeadsForm
   useEffect(() => {
     const handleNavigateToLeadTable = () => {
       setActiveSection("leads");
@@ -450,11 +452,9 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // Listen for rate quotation events from LeadSaleTableModule
   useEffect(() => {
     const handleRateQuotation = (event: CustomEvent<{ lead: LeadRecord }>) => {
       const { lead } = event.detail;
-      console.log("Rate quotation event received for lead:", lead);
       if (lead) {
         setSelectedLeadForRateQuotation(lead);
         setActiveSection("rate-quotation");
@@ -520,22 +520,11 @@ export default function DashboardPage() {
     setActiveAccessKey(key);
   };
 
-  // 🔥 Handler for Sales Lead Table
   const handleSalesLeadSelect = (key: string) => {
     if (key === "sales-lead-table" || key === "sale-lead-table") {
       setPendingModuleKey(null);
       setActiveSection("leads");
       setActiveLeadView("sale-lead-table");
-      resetAllReportStates();
-    }
-  };
-
-  // 🔥 Handler for TL Tables
-  const handleTlTablesSelect = (key: string) => {
-    if (key === "tl-tables") {
-      setPendingModuleKey(null);
-      setActiveSection("leads");
-      setActiveLeadView("tl-tables");
       resetAllReportStates();
     }
   };
@@ -607,7 +596,6 @@ export default function DashboardPage() {
         );
       }
 
-      // 🔥 Condition for sale-lead-table
       if (activeLeadView === "sale-lead-table") {
         return (
           <div className="space-y-6">
@@ -620,7 +608,7 @@ export default function DashboardPage() {
         if (!selectedLeadForEdit) {
           return renderFallback(
             "No Lead Selected",
-            "Please select a lead from the table to edit. Go to Sales Lead Table and click the Edit button on a lead.",
+            "Please select a lead from the table to edit.",
           );
         }
         return (
@@ -640,15 +628,6 @@ export default function DashboardPage() {
         );
       }
 
-      // 🔥 Condition for tl-tables
-      if (activeLeadView === "tl-tables") {
-        return (
-          <div className="space-y-6">
-            <TeamLeaderLeadTableModule />
-          </div>
-        );
-      }
-
       return (
         <div className="space-y-6">
           <LeadsOverviewModule />
@@ -663,15 +642,7 @@ export default function DashboardPage() {
         </div>
       );
     }
-
     if (activeSection === "dashboard") {
-      if (activeDashboardView === "leads-dashboard") {
-        return (
-          <div className="space-y-6">
-            <LeadsOverviewModule />
-          </div>
-        );
-      }
       if (activeDashboardView === "presales-dashboard") {
         return (
           <div className="space-y-6">
@@ -679,34 +650,30 @@ export default function DashboardPage() {
           </div>
         );
       }
-      if (activeDashboardView === "citymanager-dashboard") {
-        return (
-          <div className="space-y-6">
-            <div>City Manager Dashboard Coming Soon</div>
-          </div>
-        );
-      }
-      if (activeDashboardView === "bdm-dashboard") {
-        return (
-          <div className="space-y-6">
-            <BdmDashboardModule />
-          </div>
-        );
-      }
-      if (activeDashboardView === "salesteam-dashboard") {
+      if (activeDashboardView === "telesales-dashboard") {
         return (
           <div className="space-y-6">
             <SalesTeamDashboardModule />
           </div>
         );
       }
+
       if (activeDashboardView === "teamleader-dashboard") {
         return (
           <div className="space-y-6">
-            <TeamleaderDashboardModule />
+            <TeamLeaderDashboardModule />
           </div>
         );
       }
+
+      if (activeDashboardView === "citymanager-dashboard") {
+        return (
+          <div className="space-y-6">
+            <CityManagerDashboardModule />
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-6">
           <LeadsOverviewModule />
@@ -735,9 +702,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-100 text-slate-900">
-      {/* Navbar - Full Width */}
       <Navbar
-        // 🔥 Added showSalesMenu prop
         showSalesMenu={true}
         showAccess={activeSection === "access"}
         showMaster={activeSection === "master"}
@@ -761,7 +726,6 @@ export default function DashboardPage() {
         onAccessSelect={handleAccessSelect}
         onSalesLeadSelect={handleSalesLeadSelect}
         onSalesEditFormSelect={handleSalesEditFormSelect}
-        onTlTablesSelect={handleTlTablesSelect}
         onMasterSelect={(key) => {
           const targeted = permittedMasterTabs.find((tab) => tab.key === key);
           setActiveSection("master");
@@ -779,9 +743,7 @@ export default function DashboardPage() {
             setActiveSection("leads");
             setActiveLeadView(key);
             resetAllReportStates();
-          }
-          // 🔥 Optional: Also handle through onLeadSelect
-          else if (key === "sale-lead-table") {
+          } else if (key === "sale-lead-table") {
             handleSalesLeadSelect(key);
           }
         }}
@@ -792,7 +754,6 @@ export default function DashboardPage() {
         onLogout={handleLogout}
       />
 
-      {/* Sidebar + Main Content - Remaining Height */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activeItem={activeSection}
@@ -813,9 +774,16 @@ export default function DashboardPage() {
             resetAllReportStates();
           }}
           onLeadsClick={() => {
-            setActiveSection("leads");
+            const isTelesales =
+              userSubDepartment?.toLowerCase() === "tele-sales";
+            if (isTelesales) {
+              setActiveSection("leads");
+              setActiveLeadView("sale-lead-table");
+            } else {
+              setActiveSection("leads");
+              setActiveLeadView("dashboard");
+            }
             setPendingModuleKey(null);
-            setActiveLeadView("dashboard");
             resetAllReportStates();
           }}
           onRateQuotationClick={() => {

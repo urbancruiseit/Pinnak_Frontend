@@ -134,8 +134,8 @@ export const TABLE_BANNER_COLUMNS: BannerColumn[] = [
     minWidthPx: 120,
   },
   {
-    key: "customerName",
-    label: "NAME",
+    key: "fullName",
+    label: "FULL NAME",
     groupLabel: "CUSTOMER",
     groupClass: "text-white",
     labelClass: "text-white font-black",

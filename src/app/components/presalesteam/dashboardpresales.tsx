@@ -76,14 +76,13 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-xl">Loading dashboard...</div>
+        <div className="text-xl">Pre Sales dashboard...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 bg-green-50">
-
       <Filters onFilterChange={handleFilterChange} salesTeam={salesTeam} />
 
       <StatsCards leads={filteredLeads} salesTeam={salesTeam} />

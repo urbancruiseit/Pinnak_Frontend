@@ -44,7 +44,7 @@ const UnwantedModal: React.FC<UnwantedModalProps> = ({
 
     const unwanted_status = selectedOption === "yes" ? "unwanted" : "wanted";
 
-    const payload = {
+    const payload: { id: number | string; unwanted_status: "wanted" | "unwanted" } = {
       id: Number(lead.id), 
       unwanted_status,
     };

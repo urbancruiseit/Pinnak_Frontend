@@ -184,13 +184,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         )}
 
-        {/* Dashboard - Hide for Sales and Presales */}
-        {(userRole === "admin" ||
-          userRole === "bdm" ||
-          userRole?.toLowerCase() === "team leader" ||
-          userRole?.toLowerCase() === "teamleader" ||
-          userRole === "city manager" ||
-          userRole?.toLowerCase() === "citymanager") && (
+        {/* Dashboard - Only for Admin */}
+        {userRole === "admin" && (
           <MenuItem
             icon={<Monitor size={isExpanded ? 26 : iconSize} />}
             label="DASHBOARD"

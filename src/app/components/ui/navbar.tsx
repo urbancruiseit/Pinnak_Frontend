@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import userAvatar from "../../assets/user-pic.png";
 import siteIcon from "../../assets/SITE-ICON.png";
-import pinaak from "../../assets/pinaak.png";
+import pinaak from "../../assets/pinnak.png";
 
 type MenuItem = {
   label: string;
@@ -37,8 +37,12 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
   {
     key: "customers",
     label: "CUSTOMERS",
-    items: [{ label: "Customer Personal", value: "customer-personal" }],
+    items: [
+      { label: "Customer Personal", value: "customer-personal" },
+      { label: "Customer Table", value: "customer-table" },
+    ],
   },
+
   {
     key: "master",
     label: "UC",
@@ -59,7 +63,10 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
   {
     key: "vendor",
     label: "VENDOR",
-    items: [{ label: "Vendor Form Data", value: "vendor" }],
+    items: [
+      { label: "Vendor Form Data", value: "vendor" },
+      { label: "Vendor Table", value: "vendor-table" },
+    ],
   },
   {
     key: "vehicles",
@@ -74,7 +81,10 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
   {
     key: "drivers",
     label: "DRIVER",
-    items: [{ label: "Driver Form Data", value: "driver" }],
+    items: [
+      { label: "Driver Form Data", value: "driver" },
+      { label: "Driver Table", value: "driver-table" },
+    ],
   },
 ];
 
@@ -357,7 +367,7 @@ export function Navbar({
   return (
     <nav
       ref={navbarRef}
-      className="w-full h-16 z-50 flex flex-col border-b border-gray-200 shadow-sm bg-orange-50  relative"
+      className="w-full h-16 z-50 flex flex-col border-b border-gray-200 shadow-sm bg-orange-50 relative"
     >
       {/* Top bar with mobile menu button and user avatar */}
       <div className="flex items-center h-16 w-full px-4 justify-between md:hidden">
@@ -480,40 +490,44 @@ export function Navbar({
               </>
             )}
 
-            {/* LEADS MENU */}
+            {/* LEADS MENU - Only show when showLeadsMenu is true (activeSection === "leads") */}
             {showLeadsMenu && (
               <>
-                {/* New Lead - Hide for Sales role */}
-                {userRole?.toLowerCase() !== "sales" && (
-                  <div className="relative w-full md:w-auto">
-                    <button
-                      type="button"
-                      className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                      onClick={() => {
-                        onLeadSelect?.("lead-form");
-                      }}
-                    >
-                      <FileText size={16} className="mr-1.5 flex-shrink-0" />
-                      <span className="truncate">New Lead</span>
-                    </button>
-                  </div>
-                )}
+                {/* New Lead - Hide for Sales and Travel Advisor */}
+                {userRole?.toLowerCase() !== "sales" &&
+                  !roleLabel?.toLowerCase().includes("travel") &&
+                  !roleLabel?.toLowerCase().includes("advisor") && (
+                    <div className="relative w-full md:w-auto">
+                      <button
+                        type="button"
+                        className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
+                        onClick={() => {
+                          onLeadSelect?.("lead-form");
+                        }}
+                      >
+                        <FileText size={16} className="mr-1.5 flex-shrink-0" />
+                        <span className="truncate">New Lead</span>
+                      </button>
+                    </div>
+                  )}
 
-                {/* Lead Table - Hide for Sales role */}
-                {userRole?.toLowerCase() !== "sales" && (
-                  <div className="relative w-full md:w-auto">
-                    <button
-                      type="button"
-                      className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                      onClick={() => {
-                        onLeadSelect?.("lead-table");
-                      }}
-                    >
-                      <FileText size={16} className="mr-1.5 flex-shrink-0" />
-                      <span className="truncate">Lead Table</span>
-                    </button>
-                  </div>
-                )}
+                {/* Lead Table - Hide for Sales and Travel Advisor */}
+                {userRole?.toLowerCase() !== "sales" &&
+                  !roleLabel?.toLowerCase().includes("travel") &&
+                  !roleLabel?.toLowerCase().includes("advisor") && (
+                    <div className="relative w-full md:w-auto">
+                      <button
+                        type="button"
+                        className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
+                        onClick={() => {
+                          onLeadSelect?.("lead-table");
+                        }}
+                      >
+                        <FileText size={16} className="mr-1.5 flex-shrink-0" />
+                        <span className="truncate">Lead Table</span>
+                      </button>
+                    </div>
+                  )}
 
                 {/* TL Tables - Show for Team Leader role */}
                 {(userRole?.toLowerCase() === "team leader" ||
@@ -533,9 +547,13 @@ export function Navbar({
                   </div>
                 )}
 
-                {/* Sales Lead Table - Show for Admin and Sales roles */}
+                {/* Sales Lead Table - Only show in Leads section for Admin, Sales, and Travel Advisor roles */}
                 {(userRole?.toLowerCase() === "sales" ||
-                  userRole?.toLowerCase() === "admin") && (
+                  userRole?.toLowerCase() === "admin" ||
+                  userRole?.toLowerCase() === "travel advisor" ||
+                  userRole?.toLowerCase() === "travel" ||
+                  roleLabel?.toLowerCase().includes("travel") ||
+                  roleLabel?.toLowerCase().includes("advisor")) && (
                   <div className="relative w-full md:w-auto">
                     <button
                       type="button"
@@ -837,7 +855,7 @@ export function Navbar({
                         className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
                       >
                         <span className="w-1 h-1 rounded-full bg-orange-300"></span>
-                        Reset PAssword
+                        Reset Password
                       </button>
                     )}
                   </div>
