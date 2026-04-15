@@ -1,5 +1,4 @@
-import { baseApi } from "@/uitils/commonApi";
-import axios from "axios";
+import axiosInstance from "@/uitils/axioInstance";
 
 export interface CustomerRecord {
   id?: number;
@@ -28,11 +27,7 @@ export interface CustomerRecord {
   stateId?: number;
 }
 
-const customersApi = `${baseApi}/newcustomer`;
-
-// ─── Field mapper: CustomerForm shape → backend shape ──────────────────────
-// Form mein: phone, email, dateOfBirth
-// Backend mein: customerPhone, customerEmail, date_of_birth
+// ─── FIELD MAPPER ─────────────────────────────────
 const mapFormToBackend = (
   formData: Partial<CustomerRecord> & {
     phone?: string;
@@ -64,60 +59,72 @@ const mapFormToBackend = (
   customerState: formData.customerState || undefined,
 });
 
-// ─── Fetch All Customers ────────────────────────────────────────────────────
+// ─── FETCH ALL CUSTOMERS ───────────────────────────
 export const fetchCustomersAPI = async (): Promise<CustomerRecord[]> => {
   try {
-    const response = await axios.get(customersApi);
+    const response = await axiosInstance.get("/newcustomer");
+
     if (response.data?.data?.customers) {
       return response.data.data.customers;
     }
+
     return [];
   } catch (error: any) {
-    console.error("Error fetching customers:", error);
+    console.error(
+      "Error fetching customers:",
+      error.response?.data || error.message,
+    );
     throw new Error(
       error.response?.data?.message || "Error fetching customers",
     );
   }
 };
 
-// ─── Search Customers ───────────────────────────────────────────────────────
+// ─── SEARCH CUSTOMERS ──────────────────────────────
 export const searchCustomersAPI = async (
   searchTerm: string,
 ): Promise<CustomerRecord[]> => {
   try {
-    const response = await axios.get(`${customersApi}/search`, {
+    const response = await axiosInstance.get("/newcustomer/search", {
       params: { search: searchTerm },
     });
+
     if (response.data?.data?.customers) return response.data.data.customers;
     if (response.data?.customers) return response.data.customers;
     if (Array.isArray(response.data)) return response.data;
+
     return [];
   } catch (error: any) {
-    console.error("Error searching customers:", error);
+    console.error(
+      "Error searching customers:",
+      error.response?.data || error.message,
+    );
     throw new Error(
       error.response?.data?.message || "Error searching customers",
     );
   }
 };
 
-// ─── Create Customer ────────────────────────────────────────────────────────
+// ─── CREATE CUSTOMER ───────────────────────────────
 export const createCustomerAPI = async (
   formData: Partial<CustomerRecord> & { phone?: string; email?: string },
 ): Promise<CustomerRecord> => {
   try {
     const payload = mapFormToBackend(formData);
-    const response = await axios.post(customersApi, payload);
 
-    if (response.data?.data?.customer) return response.data.data.customer;
-    return response.data.data;
+    const response = await axiosInstance.post("/newcustomer", payload);
+
+    return response.data?.data?.customer || response.data.data;
   } catch (error: any) {
-    console.error("Error creating customer:", error);
+    console.error(
+      "Error creating customer:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error creating customer");
   }
 };
 
-// ─── Update Customer ────────────────────────────────────────────────────────
-// Backend route: PUT /newcustomer/:id  ← patch nahi, PUT hai
+// ─── UPDATE CUSTOMER ───────────────────────────────
 export const updateCustomerAPI = async (
   id: number,
   formData: Partial<CustomerRecord> & {
@@ -129,16 +136,17 @@ export const updateCustomerAPI = async (
   try {
     const payload = mapFormToBackend(formData);
 
-    // axios.put — route file mein router.route("/:id").put(updateCustomer)
-    const response = await axios.put(`${customersApi}/${id}`, payload);
+    const response = await axiosInstance.put(`/newcustomer/${id}`, payload);
 
     if (response.data?.data?.customer) return response.data.data.customer;
     if (response.data?.data) return response.data.data;
 
-    // Backend data: null bhejta hai update pe — form data se reconstruct
     return { ...payload, id, customerPhone: payload.customerPhone! };
   } catch (error: any) {
-    console.error("Error updating customer:", error);
+    console.error(
+      "Error updating customer:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error updating customer");
   }
 };

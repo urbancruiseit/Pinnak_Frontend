@@ -157,6 +157,8 @@ export interface User {
   firstName?: string;
   lastName?: string;
   fullName?: string;
+  city_names?: string;
+  city_ids?: string;
   // Add other fields as needed
 }
 

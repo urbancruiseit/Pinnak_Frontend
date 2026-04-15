@@ -1,32 +1,30 @@
-import { baseApi } from "@/uitils/commonApi";
-import axios from "axios";
+import axiosInstance, { axiosInstance_hrms } from "@/uitils/axioInstance";
 import type { User } from "@/types/types";
 
 interface LoginData {
-  email: string;
+  username: string;
   password: string;
 }
-const loginApi = `${baseApi}/user`;
+
+// ✅ LOGIN USER
 export const loginUser = async (data: LoginData): Promise<User> => {
   try {
-    const response = await axios.post<User>(`${loginApi}/login`, data, {
-      headers: { "Content-Type": "application/json" },
-      withCredentials: true,
-    });
+    const response = await axiosInstance_hrms.post<User>("/user/login", data);
 
     return response.data;
   } catch (error: any) {
-    console.error("Login Error:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || "Login failed");
+    console.error("Login Error:", error.response?.data || error.message || error);
+    throw new Error(error.response?.data?.message || error.message || "Login failed");
   }
 };
 
+// ✅ CURRENT USER
 export const currentUser = async (): Promise<User> => {
   try {
-    const response = await axios.get<User>(`${loginApi}/current-user`, {
-      withCredentials: true,
-    });
-console.log("Current user responsessess:", response.data);
+    const response = await axiosInstance_hrms.get<User>("/user/current-user");
+
+    console.log("Current user response:", response.data);
+
     return response.data.data;
   } catch (error: any) {
     console.error("Current user error:", error.response?.data || error.message);
@@ -34,13 +32,12 @@ console.log("Current user responsessess:", response.data);
   }
 };
 
+// ✅ CREATE USER
 export const createUser = async (formData: Partial<User>): Promise<User> => {
   try {
     console.log("create user", formData);
-    const response = await axios.post<User>(loginApi, formData, {
-      headers: { "Content-Type": "application/json" },
-      withCredentials: true,
-    });
+
+    const response = await axiosInstance.post<User>("/user", formData);
 
     return response.data;
   } catch (error: any) {

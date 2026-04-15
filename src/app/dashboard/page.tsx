@@ -384,8 +384,8 @@ export default function DashboardPage() {
         userAny.department_name || userAny.departmentname || "";
 
       setUserRole(role);
-      setUserName(currentUser.name || "User");
-      setUserEmail(currentUser.email || "");
+      setUserName(currentUser.fullName || "User");
+      setUserEmail(currentUser.role || "");
       setUserSubDepartment(subDepartment_name);
       setUserDepartment(departmentName);
 

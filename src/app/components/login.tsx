@@ -7,7 +7,6 @@ import { loginUserThunk } from "../features/user/userSlice";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../redux/store";
 import Image from "next/image";
-import { clsx } from "clsx"; // or your preferred cn utility
 
 import pinaakLogo from "@/app/assets/pinnak.png";
 import urbanlogo from "@/app/assets/urbanlogo.png";
@@ -24,11 +23,10 @@ import {
 } from "lucide-react";
 
 type LoginFormValues = {
-  email: string;
+  username: string;
   password: string;
 };
 
-// Simple cn helper if you don't have one
 const cn = (...classes: (string | boolean | undefined | null)[]) =>
   classes.filter(Boolean).join(" ");
 
@@ -36,7 +34,7 @@ export function Login() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
-  const [serverError, setServerError] = useState(""); // ✅ fixed name
+  const [serverError, setServerError] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -119,15 +117,12 @@ export function Login() {
 
               <div className="space-y-6">
                 <div className="text-center flex flex-col items-center gap-2">
-                  {/* First Container */}
                   <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm">
                     <Sparkles size={16} />
                     <p className="text-white text-md font-medium">
                       Sales and Operational System
                     </p>
                   </div>
-
-                  {/* Second Container (Next Line) */}
                   <div className="inline-flex bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm">
                     <p className="text-sm text-white font-light tracking-wide">
                       Urban Cruise
@@ -195,7 +190,6 @@ export function Login() {
                 </p>
               </div>
 
-              {/* ✅ Fixed: serverError instead of error */}
               {serverError && (
                 <div className="group relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-xl blur-xl transition-all group-hover:blur-2xl" />
@@ -211,18 +205,17 @@ export function Login() {
                 </div>
               )}
 
-              {/* ✅ Fixed: handleSubmit(onSubmit) */}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                {/* Email */}
+                {/* USERNAME FIELD */}
                 <div className="space-y-2">
-                  <label className="text-md font-semibold text-black  ml-1">
-                    Email
+                  <label className="text-md font-semibold text-black ml-1">
+                    Username
                   </label>
                   <div className="relative group">
                     <div
                       className={cn(
                         "absolute inset-0 bg-gradient-to-r from-green-600/20 to-emerald-500/20 rounded-xl blur-xl transition-all duration-500",
-                        focusedField === "email"
+                        focusedField === "username"
                           ? "opacity-100"
                           : "opacity-0 group-hover:opacity-50",
                       )}
@@ -232,34 +225,34 @@ export function Login() {
                         size={18}
                         className={cn(
                           "absolute left-4 transition-all duration-300",
-                          focusedField === "email"
+                          focusedField === "username"
                             ? "text-green-600"
                             : "text-gray-400",
                         )}
                       />
                       <input
-                        type="email"
-                        {...register("email", {
-                          required: "Email is required",
-                        })} // ✅ react-hook-form register
-                        onFocus={() => setFocusedField("email")}
+                        type="text"
+                        {...register("username", {
+                          required: "Username is required",
+                        })}
+                        onFocus={() => setFocusedField("username")}
                         onBlur={() => setFocusedField(null)}
-                        placeholder="Enter your email"
+                        placeholder="Enter your username"
                         disabled={isSubmitting}
-                        className="w-full pl-11 pr-4 h-12 rounded-xl border  bg-white  text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-11 pr-4 h-12 rounded-xl border bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
-                    {errors.email && (
+                    {errors.username && (
                       <p className="text-xs text-red-500 mt-1 ml-1">
-                        {errors.email.message}
+                        {errors.username.message}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Password */}
+                {/* PASSWORD FIELD */}
                 <div className="space-y-2">
-                  <label className="text-md font-semibold text-black  ml-1">
+                  <label className="text-md font-semibold text-black ml-1">
                     Password
                   </label>
                   <div className="relative group">
@@ -285,12 +278,12 @@ export function Login() {
                         type={showPw ? "text" : "password"}
                         {...register("password", {
                           required: "Password is required",
-                        })} // ✅ react-hook-form register
+                        })}
                         onFocus={() => setFocusedField("password")}
                         onBlur={() => setFocusedField(null)}
                         placeholder="••••••••"
                         disabled={isSubmitting}
-                        className="w-full pl-11 pr-4 h-12 rounded-xl border  bg-white  text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-11 pr-4 h-12 rounded-xl border bg-white text-gray-900  placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button
                         type="button"
@@ -315,7 +308,7 @@ export function Login() {
                   </p>
                 </div>
 
-                {/* ✅ Fixed: isSubmitting instead of loading */}
+                {/* SUBMIT BUTTON */}
                 <button
                   type="submit"
                   disabled={isSubmitting}

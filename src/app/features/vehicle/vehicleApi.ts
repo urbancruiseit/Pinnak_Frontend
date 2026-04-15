@@ -1,16 +1,19 @@
-import axios from "axios";
+import axiosInstance from "@/uitils/axioInstance";
 import { Vehicle } from "@/types/types";
-import { baseApi } from "@/uitils/commonApi";
 
-const vehicleApi = `${baseApi}/vehicle`;
-
+// ✅ GET ALL VEHICLES
 export const getVehiclesApi = async (): Promise<Vehicle[]> => {
   try {
-    const res = await axios.get(vehicleApi);
+    const res = await axiosInstance.get("/vehicle");
 
     return res.data.data;
   } catch (error: any) {
-    console.error("❌ Error fetching vehicles:", error.message);
-    throw error;
+    console.error(
+      "❌ Error fetching vehicles:",
+      error.response?.data || error.message,
+    );
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch vehicles",
+    );
   }
 };

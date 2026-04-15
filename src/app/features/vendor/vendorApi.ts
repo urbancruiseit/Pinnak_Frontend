@@ -1,5 +1,4 @@
-import { baseApi } from "@/uitils/commonApi";
-import axios from "axios";
+import axiosInstance from "@/uitils/axioInstance";
 
 export interface VendorFormData {
   name: string;
@@ -18,7 +17,6 @@ export interface VendorFormData {
   cooperativeName: string;
   cooperativeNumber: string;
 
-  // ✅ Files ab string hain (Cloudinary URL baad mein ayega, abhi "" bhejo)
   passportPhoto: string;
   panDoc: string;
   gstDoc: string;
@@ -59,7 +57,6 @@ export interface VendorResponse {
   code: string;
   message?: string;
 
-  // Alternative field names that might come from backend
   vendor_name?: string;
   mobile?: string;
   company_name?: string;
@@ -75,7 +72,6 @@ export interface VendorResponse {
   state?: string;
   status?: string;
 
-  // Nested objects
   personalInfo?: {
     personalAddress: string;
     personalCity: string;
@@ -87,21 +83,16 @@ export interface VendorResponse {
   };
 }
 
-const vendorApi = `${baseApi}/vendor`;
-
-// ✅ Sirf JSON payload banao — koi FormData nahi, koi File object nahi
+// ✅ Payload Builder
 const buildJsonPayload = (data: VendorFormData): Record<string, any> => {
   const payload: Record<string, any> = {};
 
   Object.keys(data).forEach((key) => {
     const value = data[key as keyof VendorFormData];
 
-    // Nested objects ko as-is rakho
     if (typeof value === "object" && value !== null) {
       payload[key] = value;
-    }
-    // Empty strings skip karo (optional — hata sakte ho agar backend ko chahiye)
-    else if (value !== null && value !== undefined && value !== "") {
+    } else if (value !== null && value !== undefined && value !== "") {
       payload[key] = value;
     }
   });
@@ -109,29 +100,27 @@ const buildJsonPayload = (data: VendorFormData): Record<string, any> => {
   return payload;
 };
 
-// ─── Create Vendor ────────────────────────────────────────────────────────
+// ─── CREATE VENDOR ─────────────────────────────────
 export const createVendorAPI = async (
   formData: VendorFormData,
 ): Promise<VendorResponse> => {
   try {
     const payload = buildJsonPayload(formData);
-    console.log("Payload being sent to API:", payload);
+    console.log("Payload:", payload);
 
-    const response = await axios.post(vendorApi, payload, {
-      headers: {
-        "Content-Type": "application/json", // ✅ lowercase + JSON (pehle galat tha)
-      },
-    });
+    const response = await axiosInstance.post("/vendor", payload);
 
-    if (response.data?.data?.vendor) return response.data.data.vendor;
-    return response.data.data;
+    return response.data?.data?.vendor || response.data.data;
   } catch (error: any) {
-    console.error("Error creating vendor:", error);
+    console.error(
+      "Error creating vendor:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error creating vendor");
   }
 };
 
-// ─── Update Vendor ────────────────────────────────────────────────────────
+// ─── UPDATE VENDOR ─────────────────────────────────
 export const updateVendorAPI = async (
   id: number,
   formData: VendorFormData,
@@ -140,87 +129,63 @@ export const updateVendorAPI = async (
     const payload = buildJsonPayload(formData);
     console.log("Update Payload:", payload);
 
-    const response = await axios.put(`${vendorApi}/${id}`, payload, {
-      headers: {
-        "Content-Type": "application/json", // ✅ JSON kyunki ab koi file nahi
-      },
-    });
+    const response = await axiosInstance.put(`/vendor/${id}`, payload);
 
-    if (response.data?.data?.vendor) return response.data.data.vendor;
-    return response.data.data;
+    return response.data?.data?.vendor || response.data.data;
   } catch (error: any) {
-    console.error("Error updating vendor:", error);
+    console.error(
+      "Error updating vendor:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error updating vendor");
   }
 };
 
-// ─── Get All Vendors ────────────────────────────────────────────────────────
+// ─── GET ALL VENDORS ─────────────────────────────────
 export const getAllVendorsAPI = async (): Promise<VendorResponse[]> => {
   try {
-    const response = await axios.get(`${vendorApi}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await axiosInstance.get("/vendor");
 
-    console.log("Get All Vendors Response:", response.data);
+    const data = response.data;
 
-    // Handle different response structures from backend
-    if (response.data?.data?.vendors) {
-      return response.data.data.vendors;
-    }
-
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
-
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-
-    if (response.data?.vendors && Array.isArray(response.data.vendors)) {
-      return response.data.vendors;
-    }
+    if (data?.data?.vendors) return data.data.vendors;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.vendors)) return data.vendors;
 
     return [];
   } catch (error: any) {
-    console.error("Error fetching vendors:", error);
+    console.error(
+      "Error fetching vendors:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error fetching vendors");
   }
 };
 
-// ─── Get Single Vendor by ID ────────────────────────────────────────────────
+// ─── GET VENDOR BY ID ─────────────────────────────────
 export const getVendorByIdAPI = async (
   id: number,
 ): Promise<VendorResponse | null> => {
   try {
-    const response = await axios.get(`${vendorApi}/${id}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await axiosInstance.get(`/vendor/${id}`);
 
-    console.log("Get Vendor By ID Response:", response.data);
+    const data = response.data;
 
-    // Handle different response structures
-    if (response.data?.data?.vendor) {
-      return response.data.data.vendor;
-    }
+    if (data?.data?.vendor) return data.data.vendor;
+    if (data?.data) return data.data;
+    if (data?.vendor) return data.vendor;
 
-    if (response.data?.data) {
-      return response.data.data;
-    }
-
-    if (response.data?.vendor) {
-      return response.data.vendor;
-    }
-
-    return response.data || null;
+    return data || null;
   } catch (error: any) {
-    console.error("Error fetching vendor by ID:", error);
+    console.error(
+      "Error fetching vendor:",
+      error.response?.data || error.message,
+    );
     throw new Error(error.response?.data?.message || "Error fetching vendor");
   }
 };
+
 export default {
   createVendorAPI,
   updateVendorAPI,

@@ -54,6 +54,7 @@ export const CATEGORY_OPTIONS: Record<string, string[]> = {
   Personal: ["Personal"],
   Corporate: [
     "Company",
+    "NGO",
     "Educational Institute",
     "Sporting Company",
     "Government",

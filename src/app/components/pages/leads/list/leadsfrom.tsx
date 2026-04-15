@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -48,6 +48,7 @@ import {
   CATEGORY_OPTIONS,
   DEFAULT_VALUES,
 } from "../../../../../types/Editleads/editleaddata";
+import { currentUserThunk } from "@/app/features/user/userSlice";
 
 // ==================== SCHEMA DEFINITION ====================
 const schema = z.object({
@@ -94,6 +95,7 @@ const schema = z.object({
   lostReasonDetails: z.string().optional(),
   followUp: z.string().optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  city_id: z.number().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -112,6 +114,15 @@ const LeadsForm: React.FC = () => {
   const { searchResults, searching, searchError } = useSelector(
     (state: RootState) => state.newCustomer,
   );
+
+  const { currentUser } = useSelector((state: RootState) => state.user);
+  console.log("Current User in LeadsForm:", currentUser);
+
+  useEffect(() => {
+    if (!currentUser) {
+      dispatch(currentUserThunk());
+    }
+  }, [currentUser]);
 
   const {
     register,
@@ -399,6 +410,7 @@ const LeadsForm: React.FC = () => {
       city: "",
       customerCity: "",
       customerState: "",
+      city_id: undefined,
     });
   };
 
@@ -639,21 +651,12 @@ const LeadsForm: React.FC = () => {
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Presales
                 </label>
-                <div className="relative group">
-                  <Info
-                    size={15}
-                    className="absolute -top-4 right-0 text-blue-500 cursor-help"
-                  />
-                  <select
-                    {...register("telesales")}
-                    className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Presales</option>
-                    <option value="muskan">Muskan</option>
-                    <option value="sanjana">Sanjana</option>
-                    <option value="manshi">Manshi</option>
-                    <option value="other">Other</option>
-                  </select>
+
+                <div className="relative">
+                  <div className="w-full py-2 px-12 border bg-gray-100 border-gray-300 rounded-md text-gray-700">
+                    {currentUser?.fullName}
+                  </div>
+
                   <FileText
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
                     size={20}
@@ -672,15 +675,23 @@ const LeadsForm: React.FC = () => {
                     className="absolute -top-4 right-0 text-blue-500 cursor-help"
                   />
                   <select
-                    {...register("city")}
+                    {...register("city_id", { valueAsNumber: true })}
                     className="w-full py-2 border bg-white px-12 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select City</option>
-                    {CITY_OPTIONS.map((city) => (
-                      <option key={city} value={city}>
-                        {city.charAt(0).toUpperCase() + city.slice(1)}
-                      </option>
-                    ))}
+                    {Array.isArray(currentUser?.city_ids) &&
+                    currentUser.city_ids.length > 0 ? (
+                      currentUser.city_ids.map((id: number, index: number) => (
+                        <option key={id} value={id}>
+                          {Array.isArray(currentUser?.city_names) &&
+                          currentUser.city_names[index]
+                            ? currentUser.city_names[index]
+                            : `City ${id}`}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No cities available</option>
+                    )}
                   </select>
                   <FileText
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"

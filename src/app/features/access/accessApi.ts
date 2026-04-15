@@ -1,6 +1,38 @@
-// assignApi.ts - Make sure your API is properly defined
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { baseApi } from "@/uitils/commonApi";
+import { createApi } from "@reduxjs/toolkit/query/react";
+import axiosInstance from "@/uitils/axioInstance";
+
+// ✅ Custom axios base query
+const axiosBaseQuery =
+  () =>
+  async ({
+    url,
+    method,
+    data,
+    params,
+  }: {
+    url: string;
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    data?: any;
+    params?: any;
+  }) => {
+    try {
+      const result = await axiosInstance({
+        url,
+        method,
+        data,
+        params,
+      });
+
+      return { data: result.data };
+    } catch (error: any) {
+      return {
+        error: {
+          status: error.response?.status,
+          data: error.response?.data || error.message,
+        },
+      };
+    }
+  };
 
 interface User {
   uuid: string;
@@ -11,36 +43,36 @@ interface User {
 
 export const assignApi = createApi({
   reducerPath: "assignApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: baseApi,
-    credentials: "include",
-  }),
+  baseQuery: axiosBaseQuery(), // ✅ axiosInstance used here
   tagTypes: ["SalesUsers"],
+
   endpoints: (builder) => ({
+    // ─── GET SALES USERS ─────────────────────
     getSalesUsers: builder.query<User[], void>({
-      query: () => "/user/sales",
+      query: () => ({
+        url: "/user/sales",
+        method: "GET",
+      }),
+
       providesTags: ["SalesUsers"],
+
       transformResponse: (response: { success: boolean; data: User[] }) => {
-        // Ensure response.data exists and is an array
-        if (!response || !response.data || !Array.isArray(response.data)) {
-          return [];
-        }
+        if (!response?.data || !Array.isArray(response.data)) return [];
 
-        // Filter only sales users
-        const salesUsers = response.data.filter((user) => {
+        return response.data.filter((user) => {
           if (!user.role) return false;
-          const userRole = user.role.toLowerCase();
-          return userRole === "sales" || userRole.includes("sales");
+          const role = user.role.toLowerCase();
+          return role === "sales" || role.includes("sales");
         });
-
-        return salesUsers;
       },
+
       transformErrorResponse: (error) => {
         console.error("Error fetching sales users:", error);
         return error;
       },
     }),
 
+    // ─── ASSIGN USERS ───────────────────────
     assignToUsers: builder.mutation<
       void,
       { entityId: string; userIds: string[] }
@@ -48,8 +80,9 @@ export const assignApi = createApi({
       query: ({ entityId, userIds }) => ({
         url: "/leads/assign",
         method: "POST",
-        body: { leadId: entityId, userIds },
+        data: { leadId: entityId, userIds }, // ✅ body → data (axios)
       }),
+
       invalidatesTags: ["SalesUsers"],
     }),
   }),

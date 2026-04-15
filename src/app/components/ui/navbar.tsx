@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+
 import {
   Menu,
   X,
@@ -21,6 +23,9 @@ import Image from "next/image";
 import userAvatar from "../../assets/user-pic.png";
 import siteIcon from "../../assets/SITE-ICON.png";
 import pinaak from "../../assets/pinnak.png";
+import { AppDispatch, RootState } from "@/app/redux/store";
+
+import { currentUserThunk } from "@/app/features/user/userSlice";
 
 type MenuItem = {
   label: string;
@@ -38,11 +43,10 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
     key: "customers",
     label: "CUSTOMERS",
     items: [
-      { label: "Customer Personal", value: "customer-personal" },
-      { label: "Customer Table", value: "customer-table" },
+      { label: "New Customer Form", value: "customer-personal" },
+      { label: "Existing Customer Search", value: "customer-table" },
     ],
   },
-
   {
     key: "master",
     label: "UC",
@@ -64,26 +68,27 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
     key: "vendor",
     label: "VENDOR",
     items: [
-      { label: "Vendor Form Data", value: "vendor" },
-      { label: "Vendor Table", value: "vendor-table" },
+      { label: "Vendor Registration Form", value: "vendor" },
+      { label: "Vendor Search", value: "vendor-table" },
     ],
   },
   {
     key: "vehicles",
     label: "VEHICLES",
     items: [
+      { label: "Vehicle Registration Form", value: "vehicle-registration" },
       { label: "Vehicles Master", value: "vehicles" },
+      { label: "Vehicle Options", value: "vehicle-category" },
+
       { label: "Vehicle Add Form", value: "vehicle-add" },
-      { label: "Vehicle Category", value: "vehicle-category" },
-      { label: "Vehicle Registration", value: "vehicle-registration" },
     ],
   },
   {
     key: "drivers",
     label: "DRIVER",
     items: [
-      { label: "Driver Form Data", value: "driver" },
-      { label: "Driver Table", value: "driver-table" },
+      { label: "Driver Registration Form", value: "driver" },
+      { label: "Driver Search", value: "driver-table" },
     ],
   },
 ];
@@ -126,6 +131,16 @@ const SALES_MENU: MenuSection = {
   items: [{ label: "Sales Lead Table", value: "sales-lead-table" }],
 };
 
+// Fallback static data (used only when user data not available)
+const FALLBACK_REGIONS = ["North", "South", "East", "West"];
+const FALLBACK_ZONES = ["DL-NCR", "MH-West", "KA-South", "WB-East"];
+const FALLBACK_CITIES_BY_REGION: Record<string, string[]> = {
+  North: ["Delhi", "Jaipur", "Chandigarh"],
+  South: ["Bengaluru", "Chennai", "Hyderabad"],
+  East: ["Kolkata", "Patna", "Bhubaneswar"],
+  West: ["Mumbai", "Pune", "Ahmedabad"],
+};
+
 const getDashboardMenu = (userRole?: string): MenuSection => {
   const allItems: MenuItem[] = [
     { label: "Leads Dashboard", value: "leads-dashboard" },
@@ -137,7 +152,6 @@ const getDashboardMenu = (userRole?: string): MenuSection => {
   ];
 
   let allowedItems: MenuItem[] = [];
-
   const normalizedRole = userRole?.toLowerCase().trim();
 
   if (normalizedRole === "admin") {
@@ -176,15 +190,6 @@ const getDashboardMenu = (userRole?: string): MenuSection => {
   };
 };
 
-const REGIONS = ["North", "South", "East", "West"];
-
-const CITIES_BY_REGION: Record<string, string[]> = {
-  North: ["Delhi", "Jaipur", "Chandigarh"],
-  South: ["Bengaluru", "Chennai", "Hyderabad"],
-  East: ["Kolkata", "Patna", "Bhubaneswar"],
-  West: ["Mumbai", "Pune", "Ahmedabad"],
-};
-
 interface NavbarProps {
   showAccess?: boolean;
   showMaster?: boolean;
@@ -206,19 +211,20 @@ interface NavbarProps {
   onTlTablesSelect?: (key: string) => void;
   onYearSelect?: (key: string) => void;
   onAccessSelect?: (key: string) => void;
-
   permittedMasterKeys?: string[] | null;
   selectedRegion?: string;
   selectedCity?: string;
+  selectedZone?: string;
   onRegionChange?: (region: string) => void;
-  onCityChange?: (city: string) => void;
+  onCityChange?: (cityId: string) => void;
+  onZoneChange?: (zone: string) => void;
   userName?: string;
   roleLabel?: string;
   userRole?: string;
   onLogout?: () => void;
+  // ℹ️ Region/Zone/City ab Redux se directly lete hain — props ki zarurat nahi
 }
 
-// Helper function to get icon based on menu type
 const getMenuIcon = (menuKey: string, label: string) => {
   if (menuKey.includes("customer"))
     return <Users size={16} className="mr-1.5" />;
@@ -264,37 +270,50 @@ export function Navbar({
   permittedMasterKeys,
   selectedRegion = "",
   selectedCity = "",
+  selectedZone = "",
   onRegionChange,
   onCityChange,
+  onZoneChange,
   userName,
   roleLabel,
   userRole,
   onLogout,
 }: NavbarProps) {
+  // ✅ Redux se currentUser lo
+  const dispatch = useDispatch<AppDispatch>();
+  const { currentUser } = useSelector((state: RootState) => state.user);
+
+  useEffect(() => {
+    if (!currentUser) {
+      dispatch(currentUserThunk());
+    }
+  }, [currentUser]);
+
+  // ✅ currentUser se region, zone, city nikalo
+  const userRegionNames = (currentUser as any)?.region_names ?? [];
+  const userZoneNames = (currentUser as any)?.zone_names ?? [];
+  const userCityNames = (currentUser as any)?.city_names ?? [];
+  const userCityIds = (currentUser as any)?.city_ids ?? [];
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Ref for the navbar container
   const navbarRef = useRef<HTMLDivElement>(null);
-
-  console.log("Navbar component loaded successfully");
 
   const masterKeySet = useMemo(
     () => (permittedMasterKeys ? new Set(permittedMasterKeys) : null),
     [permittedMasterKeys],
   );
 
-  const cityOptions = useMemo(() => {
+  // ✅ Fallback city options (used only when userCityNames not provided)
+  const fallbackCityOptions = useMemo(() => {
     if (!selectedRegion) {
-      return Object.values(CITIES_BY_REGION).reduce<string[]>(
+      return Object.values(FALLBACK_CITIES_BY_REGION).reduce<string[]>(
         (acc, group) => acc.concat(group),
         [],
       );
     }
-    return CITIES_BY_REGION[selectedRegion] ?? [];
+    return FALLBACK_CITIES_BY_REGION[selectedRegion] ?? [];
   }, [selectedRegion]);
 
-  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -304,13 +323,9 @@ export function Navbar({
         setOpenMenu(null);
       }
     };
-
-    // Add event listener when any menu is open
     if (openMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
-    // Cleanup
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -369,14 +384,12 @@ export function Navbar({
       ref={navbarRef}
       className="w-full h-16 z-50 flex flex-col border-b border-gray-200 shadow-sm bg-orange-50 relative"
     >
-      {/* Top bar with mobile menu button and user avatar */}
+      {/* Mobile top bar */}
       <div className="flex items-center h-16 w-full px-4 justify-between md:hidden">
         <button
           type="button"
           className="flex items-center justify-center p-2 text-orange-600 transition border border-orange-200 rounded-full bg-white/80 hover:bg-white hover:shadow-md"
-          onClick={() => {
-            setMobileOpen((prev) => !prev);
-          }}
+          onClick={() => setMobileOpen((prev) => !prev)}
           aria-expanded={mobileOpen}
           aria-label="Toggle navigation"
         >
@@ -402,14 +415,14 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Main navigation - hidden on mobile, visible on desktop */}
+      {/* Main nav */}
       <div
         className={`${mobileOpen ? "block" : "hidden"} w-full px-4 pb-4 md:block md:pb-0`}
       >
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:h-16">
-          {/* Left Section - Logo + Menu Items */}
+          {/* Left Section */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap md:gap-2 lg:gap-4">
-            {/* Logo Section */}
+            {/* Logo */}
             <div className="flex items-center gap-2 flex-shrink-0 h-full">
               <Image
                 src={pinaak}
@@ -426,9 +439,7 @@ export function Navbar({
                   const visibleItems = masterKeySet
                     ? menu.items.filter((item) => masterKeySet.has(item.value))
                     : menu.items;
-                  if (visibleItems.length === 0) {
-                    return null;
-                  }
+                  if (visibleItems.length === 0) return null;
 
                   const isOpen = openMenu === menu.key;
                   const menuIcon = getMenuIcon(menu.key, menu.label);
@@ -443,11 +454,11 @@ export function Navbar({
                               ? "bg-orange-600 text-white shadow-lg md:scale-105"
                               : "bg-white text-orange-700 border-2 border-orange-300 hover:border-orange-500 hover:shadow-md hover:scale-[1.02]"
                           } md:min-w-[100px] md:h-9 md:py-2`}
-                        onClick={() => {
+                        onClick={() =>
                           setOpenMenu((prev) =>
                             prev === menu.key ? null : menu.key,
-                          );
-                        }}
+                          )
+                        }
                         aria-expanded={openMenu === menu.key}
                       >
                         <span className="flex items-center truncate">
@@ -490,10 +501,9 @@ export function Navbar({
               </>
             )}
 
-            {/* LEADS MENU - Only show when showLeadsMenu is true (activeSection === "leads") */}
+            {/* LEADS MENU */}
             {showLeadsMenu && (
               <>
-                {/* New Lead - Hide for Sales and Travel Advisor */}
                 {userRole?.toLowerCase() !== "sales" &&
                   !roleLabel?.toLowerCase().includes("travel") &&
                   !roleLabel?.toLowerCase().includes("advisor") && (
@@ -501,9 +511,7 @@ export function Navbar({
                       <button
                         type="button"
                         className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                        onClick={() => {
-                          onLeadSelect?.("lead-form");
-                        }}
+                        onClick={() => onLeadSelect?.("lead-form")}
                       >
                         <FileText size={16} className="mr-1.5 flex-shrink-0" />
                         <span className="truncate">New Lead</span>
@@ -511,7 +519,6 @@ export function Navbar({
                     </div>
                   )}
 
-                {/* Lead Table - Hide for Sales and Travel Advisor */}
                 {userRole?.toLowerCase() !== "sales" &&
                   !roleLabel?.toLowerCase().includes("travel") &&
                   !roleLabel?.toLowerCase().includes("advisor") && (
@@ -519,9 +526,7 @@ export function Navbar({
                       <button
                         type="button"
                         className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                        onClick={() => {
-                          onLeadSelect?.("lead-table");
-                        }}
+                        onClick={() => onLeadSelect?.("lead-table")}
                       >
                         <FileText size={16} className="mr-1.5 flex-shrink-0" />
                         <span className="truncate">Lead Table</span>
@@ -529,7 +534,6 @@ export function Navbar({
                     </div>
                   )}
 
-                {/* TL Tables - Show for Team Leader role */}
                 {(userRole?.toLowerCase() === "team leader" ||
                   userRole?.toLowerCase() === "teamleader" ||
                   userRole?.toLowerCase() === "admin") && (
@@ -537,9 +541,7 @@ export function Navbar({
                     <button
                       type="button"
                       className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                      onClick={() => {
-                        handleTlTablesSelect("tl-tables");
-                      }}
+                      onClick={() => handleTlTablesSelect("tl-tables")}
                     >
                       <FileText size={16} className="mr-1.5 flex-shrink-0" />
                       <span className="truncate">TL Tables</span>
@@ -547,7 +549,6 @@ export function Navbar({
                   </div>
                 )}
 
-                {/* Sales Lead Table - Only show in Leads section for Admin, Sales, and Travel Advisor roles */}
                 {(userRole?.toLowerCase() === "sales" ||
                   userRole?.toLowerCase() === "admin" ||
                   userRole?.toLowerCase() === "travel advisor" ||
@@ -558,9 +559,7 @@ export function Navbar({
                     <button
                       type="button"
                       className="w-full md:w-auto flex items-center justify-center gap-1 rounded-full px-4 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200 bg-white text-emerald-700 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-md hover:scale-[1.02] md:min-w-[100px] md:h-9 md:py-2"
-                      onClick={() => {
-                        onSalesLeadSelect?.("sales-lead-table");
-                      }}
+                      onClick={() => onSalesLeadSelect?.("sales-lead-table")}
                     >
                       <FileText size={16} className="mr-1.5 flex-shrink-0" />
                       <span className="truncate">Sales Lead Table</span>
@@ -575,7 +574,6 @@ export function Navbar({
               (() => {
                 const dashboardMenu = getDashboardMenu(userRole);
                 if (dashboardMenu.items.length === 0) return null;
-
                 const isOpen = openMenu === dashboardMenu.key;
 
                 return (
@@ -588,11 +586,11 @@ export function Navbar({
                             ? "bg-green-600 text-white shadow-lg md:scale-105"
                             : "bg-white text-green-700 border-2 border-green-300 hover:border-green-500 hover:shadow-md hover:scale-[1.02] hover:bg-green-50"
                         } md:min-w-[100px] md:h-9 md:py-2`}
-                      onClick={() => {
+                      onClick={() =>
                         setOpenMenu((prev) =>
                           prev === dashboardMenu.key ? null : dashboardMenu.key,
-                        );
-                      }}
+                        )
+                      }
                       aria-expanded={openMenu === dashboardMenu.key}
                     >
                       <span className="flex items-center truncate">
@@ -655,11 +653,11 @@ export function Navbar({
                               ? "bg-yellow-600 text-white shadow-lg md:scale-105"
                               : "bg-white text-yellow-700 border-2 border-yellow-300 hover:border-yellow-500 hover:shadow-md hover:scale-[1.02] hover:bg-yellow-50"
                           } md:min-w-[100px] md:h-9 md:py-2`}
-                        onClick={() => {
+                        onClick={() =>
                           setOpenMenu((prev) =>
                             prev === ACCESS_MENU.key ? null : ACCESS_MENU.key,
-                          );
-                        }}
+                          )
+                        }
                         aria-expanded={openMenu === ACCESS_MENU.key}
                       >
                         <span className="flex items-center truncate">
@@ -703,19 +701,20 @@ export function Navbar({
             )}
           </div>
 
-          {/* Right Section - Region, City, Year, User */}
+          {/* Right Section - Region, Zone, City, Year, User */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:ml-auto md:gap-2 lg:gap-3">
-            {/* Region Select */}
+            {/* ✅ Region Select — user ke assigned regions */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
                 value={selectedRegion}
-                onChange={(event) => {
-                  onRegionChange?.(event.target.value);
-                }}
+                onChange={(e) => onRegionChange?.(e.target.value)}
                 className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
               >
                 <option value="">Region</option>
-                {REGIONS.map((region) => (
+                {(userRegionNames && userRegionNames.length > 0
+                  ? userRegionNames
+                  : FALLBACK_REGIONS
+                ).map((region: string) => (
                   <option key={region} value={region}>
                     {region}
                   </option>
@@ -727,18 +726,20 @@ export function Navbar({
               />
             </div>
 
+            {/* ✅ Zone Select — user ke assigned zones */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
-                value={selectedRegion}
-                onChange={(event) => {
-                  onRegionChange?.(event.target.value);
-                }}
+                value={selectedZone}
+                onChange={(e) => onZoneChange?.(e.target.value)}
                 className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
               >
                 <option value="">Zone</option>
-                {REGIONS.map((region) => (
-                  <option key={region} value={region}>
-                    {region}
+                {(userZoneNames && userZoneNames.length > 0
+                  ? userZoneNames
+                  : FALLBACK_ZONES
+                ).map((zone: string) => (
+                  <option key={zone} value={zone}>
+                    {zone}
                   </option>
                 ))}
               </select>
@@ -748,21 +749,28 @@ export function Navbar({
               />
             </div>
 
-            {/* City Select */}
+            {/* ✅ City Select — user ke assigned cities, value = city_id */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
                 value={selectedCity}
-                onChange={(event) => {
-                  onCityChange?.(event.target.value);
-                }}
+                onChange={(e) => onCityChange?.(e.target.value)}
                 className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
               >
                 <option value="">City</option>
-                {cityOptions.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
+                {userCityNames && userCityNames.length > 0
+                  ? userCityNames.map((city: string, index: number) => (
+                      <option
+                        key={userCityIds?.[index] ?? city}
+                        value={String(userCityIds?.[index] ?? city)}
+                      >
+                        {city}
+                      </option>
+                    ))
+                  : fallbackCityOptions.map((city: string) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
               </select>
               <Building2
                 size={14}
@@ -775,9 +783,7 @@ export function Navbar({
               <div className="relative group w-full md:w-24 lg:w-28">
                 <select
                   value={activeYearKey || ""}
-                  onChange={(event) => {
-                    handleYearSelect(event.target.value);
-                  }}
+                  onChange={(e) => handleYearSelect(e.target.value)}
                   className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
                 >
                   <option value="">Year</option>
@@ -845,7 +851,6 @@ export function Navbar({
                         Sign out
                       </button>
                     )}
-
                     {onLogout && (
                       <button
                         onClick={() => {
@@ -856,6 +861,18 @@ export function Navbar({
                       >
                         <span className="w-1 h-1 rounded-full bg-orange-300"></span>
                         Reset Password
+                      </button>
+                    )}
+                    {onLogout && (
+                      <button
+                        onClick={() => {
+                          onLogout();
+                          setOpenMenu(null);
+                        }}
+                        className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-orange-300"></span>
+                        Profile
                       </button>
                     )}
                   </div>

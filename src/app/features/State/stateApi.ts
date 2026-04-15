@@ -1,7 +1,4 @@
-import axios from "axios";
-import { baseApi } from "../../../uitils/commonApi";
-
-const BASE_URL = `${baseApi}/state`;
+import axiosInstance from "@/uitils/axioInstance";
 
 export interface City {
   id: number;
@@ -13,22 +10,50 @@ export interface State {
   stateName: string;
 }
 
-// Sab states fetch karo
+// ✅ GET ALL STATES
 export const getAllStatesApi = async (): Promise<State[]> => {
-  const res = await axios.get(`${BASE_URL}/`);
-  return res.data.data; // ApiResponse wrapper ka .data
+  try {
+    const res = await axiosInstance.get("/state/");
+    return res.data.data;
+  } catch (error: any) {
+    console.error(
+      "Error fetching states:",
+      error.response?.data || error.message,
+    );
+    throw new Error(error.response?.data?.message || "Failed to fetch states");
+  }
 };
 
-// Sab cities fetch karo
+// ✅ GET ALL CITIES
 export const getAllCitiesApi = async (): Promise<City[]> => {
-  const res = await axios.get(`${BASE_URL}/allcity`);
-  return res.data.data;
+  try {
+    const res = await axiosInstance.get("/state/allcity");
+    return res.data.data;
+  } catch (error: any) {
+    console.error(
+      "Error fetching cities:",
+      error.response?.data || error.message,
+    );
+    throw new Error(error.response?.data?.message || "Failed to fetch cities");
+  }
 };
 
-// City ke basis pe states fetch karo ← YEH KEY FUNCTION HAI
-export const getStatesByCityApi = async (cityName: string): Promise<State[]> => {
-  const res = await axios.get(
-    `${BASE_URL}/states-by-city/${encodeURIComponent(cityName)}`
-  );
-  return res.data.data;
+// ✅ GET STATES BY CITY (KEY FUNCTION)
+export const getStatesByCityApi = async (
+  cityName: string,
+): Promise<State[]> => {
+  try {
+    const res = await axiosInstance.get(
+      `/state/states-by-city/${encodeURIComponent(cityName)}`,
+    );
+    return res.data.data;
+  } catch (error: any) {
+    console.error(
+      "Error fetching states by city:",
+      error.response?.data || error.message,
+    );
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch states by city",
+    );
+  }
 };

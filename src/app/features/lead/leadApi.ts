@@ -1,8 +1,5 @@
-import { baseApi } from "@/uitils/commonApi";
-import axios from "axios";
+import axiosInstance from "@/uitils/axioInstance";
 import type { LeadRecord } from "@/types/types";
-
-const leadApi = `${baseApi}/lead`;
 
 interface ApiResponse<T> {
   success: boolean;
@@ -10,56 +7,36 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+// ─── CREATE LEAD ───────────────────────────────
 export const createLeadApi = async (
   leadData: Partial<LeadRecord>,
 ): Promise<LeadRecord> => {
   try {
     console.log("API leadData:", leadData);
-    const response = await axios.post<ApiResponse<LeadRecord>>(
-      leadApi,
+
+    const response = await axiosInstance.post<ApiResponse<LeadRecord>>(
+      "/lead",
       leadData,
-      {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
     );
 
     return response.data.data;
   } catch (error: any) {
-    console.error("Create Lead Error:", error);
+    console.error("Create Lead Error:", error.response?.data || error.message);
 
-    if (axios.isAxiosError(error)) {
-      // Extract detailed error message from API response
-      const apiError = error.response?.data;
-      const errorMessage =
-        apiError?.error ||
-        apiError?.message ||
-        error.response?.data?.details ||
-        error.message ||
-        "Failed to create lead";
+    const apiError = error.response?.data;
 
-      throw new Error(errorMessage);
-    }
+    const errorMessage =
+      apiError?.error ||
+      apiError?.message ||
+      apiError?.details ||
+      error.message ||
+      "Failed to create lead";
 
-    // Handle network errors or other non-Axios errors
-    if (error.message) {
-      throw new Error(error.message);
-    }
-
-    throw new Error(
-      "Failed to create lead. Please check your connection and try again.",
-    );
+    throw new Error(errorMessage);
   }
 };
 
-export interface GetLeadsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
-
+// ─── GET LEADS (PAGINATED) ─────────────────────
 export interface PaginatedLeadsResponse {
   leads: LeadRecord[];
   total: number;
@@ -72,76 +49,58 @@ export const getLeadApi = async (
   page: number = 1,
 ): Promise<PaginatedLeadsResponse> => {
   try {
-    const response = await axios.get<ApiResponse<PaginatedLeadsResponse>>(
-      leadApi,
-      {
-        params: { page },
-        withCredentials: true,
-      },
-    );
+    const response = await axiosInstance.get<
+      ApiResponse<PaginatedLeadsResponse>
+    >("/lead", {
+      params: { page },
+    });
+
+    const data = response.data.data;
 
     return {
-      leads: response.data.data.leads || [],
-      total: response.data.data.total || 0,
-      page: response.data.data.page || page,
-      limit: response.data.data.limit || 15,
-      totalPages: Math.ceil(
-        (response.data.data.total || 0) / (response.data.data.limit || 15),
-      ),
+      leads: data.leads || [],
+      total: data.total || 0,
+      page: data.page || page,
+      limit: data.limit || 15,
+      totalPages: Math.ceil((data.total || 0) / (data.limit || 15)),
     };
   } catch (error: any) {
-    console.error("Get Leads Error:", error);
+    console.error("Get Leads Error:", error.response?.data || error.message);
 
-    if (axios.isAxiosError(error)) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to fetch leads";
-      throw new Error(errorMessage);
-    }
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "Failed to fetch leads";
 
-    // Handle network errors or other non-Axios errors
-    if (error.message) {
-      throw new Error(error.message);
-    }
-
-    throw new Error(
-      "Failed to fetch leads. Please check your connection and try again.",
-    );
+    throw new Error(errorMessage);
   }
 };
 
+// ─── UPDATE LEAD ───────────────────────────────
 export const updateLeadApi = async (
   id: string,
   leadData: Partial<LeadRecord>,
 ): Promise<LeadRecord> => {
   try {
     console.log("API update leadData:", id, leadData);
-    const response = await axios.put<ApiResponse<LeadRecord>>(
-      `${leadApi}/${id}`,
+
+    const response = await axiosInstance.put<ApiResponse<LeadRecord>>(
+      `/lead/${id}`,
       leadData,
-      {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
     );
 
     return response.data.data;
   } catch (error: any) {
-    console.error("Update Lead Error:", error);
-    if (error.message) {
-      throw new Error(error.message);
-    }
+    console.error("Update Lead Error:", error.response?.data || error.message);
 
     throw new Error(
-      "Failed to update lead. Please check your connection and try again.",
+      error.response?.data?.message || error.message || "Failed to update lead",
     );
   }
 };
 
+// ─── MARK UNWANTED ─────────────────────────────
 export const markUnwantedApi = async (
   id: number,
   data: {
@@ -152,56 +111,42 @@ export const markUnwantedApi = async (
   try {
     console.log("🚀 Marking unwanted - ID:", id, "Data:", data);
 
-    // ✅ CORRECT ENDPOINT: Matches backend route
-    const response = await axios.patch(`${leadApi}/unwanted/${id}`, data, {
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await axiosInstance.patch(`/lead/unwanted/${id}`, data);
 
     console.log("✅ Success:", response.data);
     return response.data.data;
   } catch (error: any) {
-    console.error("❌ API Error:", error);
+    console.error("❌ API Error:", error.response?.data || error.message);
 
-    if (axios.isAxiosError(error)) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to mark unwanted";
-      throw new Error(errorMessage);
-    }
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "Failed to mark unwanted";
 
-    throw new Error(error.message || "Failed to mark unwanted");
+    throw new Error(errorMessage);
   }
 };
 
+// ─── GET ALL UNWANTED LEADS ────────────────────
 export const getAllUnwantedLeadsApi = async (): Promise<LeadRecord[]> => {
   try {
-    const response = await axios.get<ApiResponse<LeadRecord[]>>(
-      `${leadApi}/unwanted/all`,
-      {
-        withCredentials: true,
-      },
-    );
+    const response =
+      await axiosInstance.get<ApiResponse<LeadRecord[]>>("/lead/unwanted/all");
 
     return response.data.data;
   } catch (error: any) {
-    console.error("Get All Unwanted Leads Error:", error);
-
-    if (axios.isAxiosError(error)) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to fetch unwanted leads";
-      throw new Error(errorMessage);
-    }
-
-    throw new Error(
-      error.message || "Failed to fetch unwanted leads. Please try again.",
+    console.error(
+      "Get All Unwanted Leads Error:",
+      error.response?.data || error.message,
     );
+
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "Failed to fetch unwanted leads";
+
+    throw new Error(errorMessage);
   }
 };
