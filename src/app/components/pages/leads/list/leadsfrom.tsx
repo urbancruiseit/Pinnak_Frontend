@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,17 +31,14 @@ import {
   CheckCircle,
   Building,
 } from "lucide-react";
-import type { LeadRecord } from "../../../../../types/types";
 import { createLead, fetchLeads } from "@/app/features/lead/leadSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/app/redux/store";
 import { getCountriesThunk } from "@/app/features/countrycode/countrycodeSlice";
 import { fetchVehicles } from "@/app/features/vehicle/vehicleSlice";
 
-// Import constants from editleaddata
 import {
   SOURCE_OPTIONS,
-  CITY_OPTIONS,
   SERVICE_TYPE_OPTIONS,
   OCCASION_OPTIONS,
   TRIP_TYPE_OPTIONS,
@@ -51,10 +48,11 @@ import {
 import { currentUserThunk } from "@/app/features/user/userSlice";
 
 // ==================== SCHEMA DEFINITION ====================
+// ✅ FIX 1: presales_id optional in schema — we validate manually in onSubmit
 const schema = z.object({
   date: z.string().min(1, "Date is required"),
   source: z.string().min(1, "Source is required"),
-  telesales: z.string().min(1, "Presales is required"),
+  presales_id: z.number().min(1).optional(), // ✅ optional here, enforced in onSubmit
   status: z.string().min(1, "Status is required"),
   customerType: z.string().min(1, "Customer category is required"),
   customerCategoryType: z.string().optional(),
@@ -116,13 +114,20 @@ const LeadsForm: React.FC = () => {
   );
 
   const { currentUser } = useSelector((state: RootState) => state.user);
-  console.log("Current User in LeadsForm:", currentUser);
+  console.log("Current User from Redux:", currentUser);
 
+  // ✅ FIX 2: Use a ref to always have latest currentUser in onSubmit
+  const currentUserRef = React.useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // Fetch current user if not available
   useEffect(() => {
     if (!currentUser) {
       dispatch(currentUserThunk());
     }
-  }, [currentUser]);
+  }, [dispatch, currentUser]);
 
   const {
     register,
@@ -132,6 +137,7 @@ const LeadsForm: React.FC = () => {
     watch,
     trigger,
     reset,
+    getValues,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -158,6 +164,7 @@ const LeadsForm: React.FC = () => {
       pickupcity: "",
       passengerTotal: 0,
       km: "",
+      presales_id: undefined,
     },
     mode: "onChange",
   });
@@ -186,7 +193,6 @@ const LeadsForm: React.FC = () => {
 
   const [customerCategoryTypeValue, setCustomerCategoryTypeValue] =
     useState("");
-  const [countryCode] = useState("+91");
   const [alternateCountryCode, setAlternateCountryCode] = useState("+91");
 
   const pickupDateTime = watch("pickupDateTime");
@@ -223,7 +229,18 @@ const LeadsForm: React.FC = () => {
     dispatch(fetchAllCities());
   }, [dispatch]);
 
-  // ✅ CORRECTED: Fetch states when city changes
+  // ✅ FIX 3: Set presales_id with shouldValidate + shouldDirty flags
+  useEffect(() => {
+    if (currentUser?.id) {
+      const userId = Number(currentUser.id);
+      setValue("presales_id", userId, {
+        shouldValidate: true, // ✅ triggers validation immediately
+        shouldDirty: true, // ✅ marks field as dirty so RHF tracks it
+      });
+    }
+  }, [currentUser, setValue]);
+
+  // Fetch states when city changes
   useEffect(() => {
     if (customerCity && customerCity !== "") {
       dispatch(fetchStatesByCity(customerCity));
@@ -371,13 +388,19 @@ const LeadsForm: React.FC = () => {
     setAlternateCountryCode("+91");
     setSearchTerm("");
     setShowDropdown(false);
+
+    // ✅ FIX 4: Always include presales_id from currentUser when resetting
+    const currentUserId = currentUserRef.current?.id
+      ? Number(currentUserRef.current.id)
+      : undefined;
+
     reset({
       status: "-",
       pickupDateTime: new Date().toISOString().slice(0, 16),
       customerType: "Personal",
       date: new Date().toISOString().slice(0, 16),
       source: "",
-      telesales: "",
+      presales_id: currentUserId, // ✅ preserve presales_id after reset
       countryName: "India",
       serviceType: "",
       vehicle2: "",
@@ -415,7 +438,6 @@ const LeadsForm: React.FC = () => {
   };
 
   const handleSelectCustomer = (customer: any) => {
-    // Split customer name
     const nameParts = customer.customerName?.split(" ") || [];
     setFormData({
       firstName: nameParts[0] || "",
@@ -427,7 +449,6 @@ const LeadsForm: React.FC = () => {
       companyName: customer.companyName || "",
     });
 
-    // Set other customer data in form
     if (customer.customerCity) setValue("customerCity", customer.customerCity);
     if (customer.state) setValue("customerState", customer.state);
     if (customer.address) setValue("customerAddress", customer.address);
@@ -443,8 +464,43 @@ const LeadsForm: React.FC = () => {
     setShowDropdown(false);
   };
 
+  // ==================== SUBMIT HANDLER ====================
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsSubmitting(true);
+
+    // ✅ FIX 5: THE MAIN FIX — Always derive presales_id from currentUser ref
+    // This is 100% reliable regardless of RHF form state / timing issues
+    const latestUser = currentUserRef.current;
+    console.log("🔍 Current User Object:", JSON.stringify(latestUser, null, 2));
+
+    // Check for id, _id, uuid, userId, or any other identifier field
+    const userId =
+      latestUser?.id || latestUser?._id || latestUser?.uuid || latestUser?.id;
+    console.log("🔍 User ID found:", userId);
+
+    const finalPresalesId = userId
+      ? Number(userId)
+      : data.presales_id && !isNaN(Number(data.presales_id))
+        ? Number(data.presales_id)
+        : null;
+
+    // ✅ FIX 6: Hard guard — do not submit if presales_id is missing
+    if (!finalPresalesId || isNaN(finalPresalesId)) {
+      console.error(
+        "presales_id is missing. currentUser:",
+        latestUser,
+        "form value:",
+        data.presales_id,
+      );
+      showToastMessage(
+        "Error: Presales user not assigned. Please refresh the page and try again.",
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    console.log("✅ Final presales_id being sent:", finalPresalesId);
+
     try {
       const payload: any = {
         date: data.date
@@ -453,14 +509,13 @@ const LeadsForm: React.FC = () => {
         enquiryTime: data.date ? `${data.date}:00` : new Date().toISOString(),
         source: data.source || "",
         status: data.status || "-",
-        telecaller: data.telesales || "Default",
-
+        presales_id: finalPresalesId, // ✅ ALWAYS a valid number here
         firstName: formData.firstName || "",
         middleName: formData.middleName || "",
         lastName: formData.lastName || "",
         customerPhone: formData.phone ? `+91 ${formData.phone}` : "",
         alternatePhone: formData.alternatePhone
-          ? `+${alternateCountryCode} ${formData.alternatePhone}`
+          ? `${alternateCountryCode} ${formData.alternatePhone}`
           : "",
         customerEmail: formData.email || "",
         companyName:
@@ -506,24 +561,26 @@ const LeadsForm: React.FC = () => {
         customerCity: data.customerCity || "",
         customerState: data.customerState || "",
         city: data.city || "",
+        city_id: data.city_id || null,
         message: "",
-        lost_reason: (data as any).lost_reason || "",
-        lostReasonDetails: (data as any).lostReasonDetails || "",
-        followUp: (data as any).followUp || "",
+        lost_reason: data.lost_reason || "",
+        lostReasonDetails: data.lostReasonDetails || "",
+        followUp: data.followUp || "",
       };
 
-      await dispatch(createLead(payload)).unwrap();
+      console.log("📦 Full payload:", JSON.stringify(payload, null, 2));
+
+      const result = await dispatch(createLead(payload)).unwrap();
+      console.log("✅ Lead created:", result);
 
       showToastMessage("Lead created successfully!");
       resetFormFields();
 
       dispatch(fetchLeads(1));
       window.dispatchEvent(new CustomEvent("leadSubmitted"));
-
-      // Navigate to lead table within the dashboard
       window.dispatchEvent(new CustomEvent("navigateToLeadTable"));
     } catch (error: any) {
-      console.error("Submit Error:", error);
+      console.error("❌ Submit Error:", error);
       let errorMessage = "Failed to save lead. Please try again.";
       if (error?.message) errorMessage = error.message;
       else if (error?.payload) errorMessage = error.payload;
@@ -644,24 +701,42 @@ const LeadsForm: React.FC = () => {
                     size={20}
                   />
                 </div>
+                {errors.source && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.source.message}
+                  </p>
+                )}
               </div>
 
-              {/* Presales */}
               <div>
                 <label className="block text-md font-extrabold text-gray-700 mb-1">
                   Presales
                 </label>
-
                 <div className="relative">
-                  <div className="w-full py-2 px-12 border bg-gray-100 border-gray-300 rounded-md text-gray-700">
-                    {currentUser?.fullName}
+                  <div className="w-full py-2 px-12 border bg-gray-100 border-gray-300 rounded-md text-gray-700 min-h-[40px] flex items-center">
+                    {currentUser ? (
+                      <span className="font-medium text-gray-800">
+                        {currentUser.fullName ||
+                          currentUser.name ||
+                          `User #${currentUser.id}`}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 animate-pulse">
+                        Loading...
+                      </span>
+                    )}
                   </div>
-
                   <FileText
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
                     size={20}
                   />
                 </div>
+                {/* Show warning if user not loaded */}
+                {!currentUser && (
+                  <p className="text-amber-600 text-xs mt-1">
+                    ⚠ Waiting for user session...
+                  </p>
+                )}
               </div>
 
               {/* City */}
@@ -704,7 +779,6 @@ const LeadsForm: React.FC = () => {
 
           {/* SECTION 2: Customer Information */}
           <div className="border rounded-xl p-6 bg-green-50">
-            {/* Header with title and search box - side by side */}
             <div className="flex justify-between items-center mb-6 pb-3 border-b">
               <h3 className="text-xl font-semibold text-green-800 flex items-center">
                 <span className="bg-green-600 text-white px-3 py-1 rounded-md mr-2">
@@ -739,9 +813,9 @@ const LeadsForm: React.FC = () => {
                   />
                 </svg>
 
-                {/* Clear button - shows only when there's search term */}
                 {searchTerm && (
                   <button
+                    type="button"
                     onClick={handleClearSearch}
                     className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                   >
@@ -761,7 +835,6 @@ const LeadsForm: React.FC = () => {
                   </button>
                 )}
 
-                {/* Loading indicator */}
                 {searching && (
                   <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg z-50 p-4 text-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600 mx-auto"></div>
@@ -771,7 +844,6 @@ const LeadsForm: React.FC = () => {
                   </div>
                 )}
 
-                {/* Search Results Dropdown */}
                 {showDropdown && !searching && searchResults.length > 0 && (
                   <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                     {searchResults.map((customer) => (
@@ -799,7 +871,6 @@ const LeadsForm: React.FC = () => {
                   </div>
                 )}
 
-                {/* No results */}
                 {showDropdown &&
                   !searching &&
                   searchTerm.length >= 2 &&
@@ -810,11 +881,11 @@ const LeadsForm: React.FC = () => {
                     </div>
                   )}
 
-                {/* Error state */}
                 {searchError && (
                   <div className="absolute top-full mt-2 w-full bg-red-50 border border-red-200 rounded-lg shadow-lg z-50 p-3 text-center">
                     <p className="text-red-600 text-sm">{searchError}</p>
                     <button
+                      type="button"
                       onClick={handleClearSearch}
                       className="mt-2 text-sm text-red-700 hover:text-red-900"
                     >
@@ -1600,6 +1671,7 @@ const LeadsForm: React.FC = () => {
                           <GripVertical size={14} className="text-purple-600" />
                           <span>{item}</span>
                           <button
+                            type="button"
                             onClick={() => removeItinerary(idx)}
                             className="text-red-500 hover:text-red-700"
                           >
@@ -2038,21 +2110,36 @@ const LeadsForm: React.FC = () => {
                   {Object.entries(errors)
                     .slice(0, 5)
                     .map(([key, error]: any) => (
-                      <li key={key}>{error?.message || `${key} is invalid`}</li>
+                      <li key={key}>
+                        <span className="font-semibold">{key}</span>:{" "}
+                        {error?.message || "is invalid"}
+                      </li>
                     ))}
                 </ul>
               </div>
             )}
+
+            {/* ✅ FIX 8: Disable submit button if currentUser is not yet loaded */}
+            {!currentUser && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-300 text-amber-700 rounded-md text-sm">
+                ⚠ Loading user session... Please wait before submitting.
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !currentUser}
               className={`w-full px-6 py-3 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                isSubmitting
+                isSubmitting || !currentUser
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-900 text-white hover:bg-blue-500"
               }`}
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting
+                ? "Submitting..."
+                : !currentUser
+                  ? "Loading user..."
+                  : "Submit"}
             </button>
           </div>
         </form>

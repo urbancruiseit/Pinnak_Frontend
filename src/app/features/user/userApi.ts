@@ -23,7 +23,7 @@ export const currentUser = async (): Promise<User> => {
   try {
     const response = await axiosInstance_hrms.get<User>("/user/current-user");
 
-    console.log("Current user response:", response.data);
+
 
     return response.data.data;
   } catch (error: any) {
@@ -35,7 +35,7 @@ export const currentUser = async (): Promise<User> => {
 // ✅ CREATE USER
 export const createUser = async (formData: Partial<User>): Promise<User> => {
   try {
-    console.log("create user", formData);
+
 
     const response = await axiosInstance.post<User>("/user", formData);
 
