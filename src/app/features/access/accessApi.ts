@@ -1,91 +1,85 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
 import axiosInstance from "@/uitils/axioInstance";
 
-// ✅ Custom axios base query
-const axiosBaseQuery =
-  () =>
-  async ({
-    url,
-    method,
-    data,
-    params,
-  }: {
-    url: string;
-    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    data?: any;
-    params?: any;
-  }) => {
-    try {
-      const result = await axiosInstance({
-        url,
-        method,
-        data,
-        params,
-      });
-
-      return { data: result.data };
-    } catch (error: any) {
-      return {
-        error: {
-          status: error.response?.status,
-          data: error.response?.data || error.message,
-        },
-      };
-    }
-  };
-
-interface User {
-  uuid: string;
-  name: string;
-  email: string;
-  role?: string;
+// 🔹 Types (agar already defined nahi hai to add karo)
+interface TravelAdvisor {
+  id: number;
+  fullName: string;
 }
 
-export const assignApi = createApi({
-  reducerPath: "assignApi",
-  baseQuery: axiosBaseQuery(), // ✅ axiosInstance used here
-  tagTypes: ["SalesUsers"],
+interface AssignResponse {
+  success: boolean;
+  leadId: number;
+  travelAdvisorId: number;
+}
 
-  endpoints: (builder) => ({
-    // ─── GET SALES USERS ─────────────────────
-    getSalesUsers: builder.query<User[], void>({
-      query: () => ({
-        url: "/user/sales",
-        method: "GET",
-      }),
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
-      providesTags: ["SalesUsers"],
+// ✅ 1. Get Travel Advisors by City
+export const getTravelAdvisorsByCityApi = async (
+  cityId: number,
+): Promise<TravelAdvisor[]> => {
+  if (!cityId) {
+    throw new Error("City ID is required");
+  }
+  console.log("advisor city id", cityId);
+  try {
+    const response = await axiosInstance.get(
+      `/assign/travel-advisors/${cityId}`,
+    );
 
-      transformResponse: (response: { success: boolean; data: User[] }) => {
-        if (!response?.data || !Array.isArray(response.data)) return [];
+    const data = response?.data?.data;
 
-        return response.data.filter((user) => {
-          if (!user.role) return false;
-          const role = user.role.toLowerCase();
-          return role === "sales" || role.includes("sales");
-        });
+    // 🔥 fallback safety
+    if (!Array.isArray(data)) return [];
+
+    return data;
+  } catch (error: any) {
+    console.error(
+      "Get Travel Advisors Error:",
+      error?.response?.data || error.message,
+    );
+
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error.message ||
+      "Failed to fetch travel advisors";
+
+    throw new Error(errorMessage);
+  }
+};
+
+// ✅ 2. Assign Travel Advisor to Lead
+export const assignTravelAdvisorApi = async (
+  leadId: number,
+  travelAdvisorId: number,
+): Promise<AssignResponse> => {
+  if (!leadId) throw new Error("Lead ID is required");
+  if (!travelAdvisorId) throw new Error("Travel Advisor ID is required");
+
+  try {
+    const response = await axiosInstance.patch<ApiResponse<AssignResponse>>(
+      `/assign/assign-travel-advisor/${leadId}`, // ✅ leadId URL mein
+      {
+        travelAdvisorId, // ✅ sirf advisorId body mein
       },
+    );
 
-      transformErrorResponse: (error) => {
-        console.error("Error fetching sales users:", error);
-        return error;
-      },
-    }),
+    const data = response?.data?.data;
+    if (!data) throw new Error("Invalid response from server");
 
-    // ─── ASSIGN USERS ───────────────────────
-    assignToUsers: builder.mutation<
-      void,
-      { entityId: string; userIds: string[] }
-    >({
-      query: ({ entityId, userIds }) => ({
-        url: "/leads/assign",
-        method: "POST",
-        data: { leadId: entityId, userIds }, // ✅ body → data (axios)
-      }),
+    return data;
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error.message ||
+      "Failed to assign travel advisor";
 
-      invalidatesTags: ["SalesUsers"],
-    }),
-  }),
-});
-
-export const { useGetSalesUsersQuery, useAssignToUsersMutation } = assignApi;
+    throw new Error(errorMessage);
+  }
+};

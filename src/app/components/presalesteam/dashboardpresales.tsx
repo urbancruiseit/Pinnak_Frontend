@@ -28,8 +28,8 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const [leadsRes, salesRes] = await Promise.all([
-        fetch("/api/saleslead"),
-        fetch("/api/sales"),
+        fetch("/api/v1/lead"),
+        fetch("/api/v1/user/sales"),
       ]);
 
       const leadsData = await leadsRes.json();

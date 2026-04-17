@@ -6,7 +6,6 @@ import type { ComponentType } from "react";
 import Navbar from "../components/ui/navbar";
 import Sidebar from "../components/ui/sidebar";
 import { Admin } from "../components/admin";
-import { Access } from "../components/Access/accesslevel";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../redux/store";
 import { currentUserThunk } from "../features/user/userSlice";
@@ -232,14 +231,7 @@ const masterTabs: MasterTab[] = [
       loading: LoadingPanel,
     }),
   },
-  {
-    key: "city",
-    label: "City Master",
-    component: dynamic(() => import("../components/Access/city"), {
-      ssr: false,
-      loading: LoadingPanel,
-    }),
-  },
+ 
   {
     key: "corporate-form",
     label: "Corporate Form",
@@ -308,22 +300,8 @@ const masterTabs: MasterTab[] = [
       loading: LoadingPanel,
     }),
   },
-  {
-    key: "zone",
-    label: "Zone",
-    component: dynamic(() => import("../components/Access/zone"), {
-      ssr: false,
-      loading: LoadingPanel,
-    }),
-  },
-  {
-    key: "region",
-    label: "Region",
-    component: dynamic(() => import("../components/Access/region"), {
-      ssr: false,
-      loading: LoadingPanel,
-    }),
-  },
+
+
 ];
 
 export default function DashboardPage() {
@@ -681,13 +659,7 @@ export default function DashboardPage() {
       );
     }
 
-    if (activeSection === "access") {
-      return (
-        <div className="space-y-6">
-          <Access activeAccessKey={activeAccessKey} />
-        </div>
-      );
-    }
+  
 
     if (activeSection === "rate-quotation") {
       return (

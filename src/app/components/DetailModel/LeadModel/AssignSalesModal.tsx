@@ -1,305 +1,133 @@
-// components/AssignSalesModal.tsx
+// AssignSalesModal.tsx
+
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { TypedUseSelectorHook } from "react-redux";
 import type { RootState, AppDispatch } from "@/app/redux/store";
 import {
-  fetchSalesUsers,
-  assignLeadToUser,
-  setSelectedUser,
-  clearSelectedUser,
-  clearAssignError,
-  resetAssignState,
-} from "../../../features/access/accessSlice";
-import type { User } from "@/types/types";
+  fetchTravelAdvisors,
+  assignTravelAdvisor,
+} from "@/app/features/access/accessSlice";
 
-const useAppDispatch = () => useDispatch<AppDispatch>();
-const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+const AssignSalesModal = ({ isOpen, onClose, leadId, cityId }: any) => {
+  const dispatch = useDispatch<AppDispatch>();
 
-interface AssignSalesModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  leadId: string; // Single lead ID
-}
+  const { advisors, loading, assignLoading } = useSelector(
+    (state: RootState) => state.travelAdvisor,
+  );
+  console.log("advisors ", advisors);
+  const [selectedAdvisorId, setSelectedAdvisorId] = useState<number | null>(
+    null,
+  );
 
-const AssignSalesModal: React.FC<AssignSalesModalProps> = ({
-  isOpen,
-  onClose,
-  leadId,
-}) => {
-  const dispatch = useAppDispatch();
-
-  const {
-    salesUsers,
-    loading,
-    error,
-    assignLoading,
-    assignError,
-    selectedUserId,
-  } = useAppSelector((state) => state.assign);
-
-  const [localSelectedUserId, setLocalSelectedUserId] = useState<string>("");
-
+  // 🔥 Fetch advisors by city
   useEffect(() => {
-    if (isOpen) {
-      dispatch(fetchSalesUsers());
-      setLocalSelectedUserId("");
-      dispatch(clearSelectedUser());
+    if (isOpen && cityId) {
+      dispatch(fetchTravelAdvisors(cityId));
     }
+  }, [isOpen, cityId, dispatch]);
 
-    return () => {
-      if (!isOpen) {
-        dispatch(clearAssignError());
-        dispatch(clearSelectedUser());
-      }
-    };
-  }, [isOpen, dispatch]);
-
-  useEffect(() => {
-    if (selectedUserId) {
-      setLocalSelectedUserId(selectedUserId);
-    }
-  }, [selectedUserId]);
-
-  const handleRadioChange = (userId: string) => {
-    setLocalSelectedUserId(userId);
-    dispatch(setSelectedUser(userId));
-  };
-
-  const handleSubmit = async () => {
-    if (!localSelectedUserId) {
-      alert("Please select a sales user");
+  // 🔥 Assign Handler
+  const handleAssign = async () => {
+    if (!selectedAdvisorId) {
+      alert("Select advisor first");
       return;
     }
 
     try {
+      // ✅ Correct
       await dispatch(
-        assignLeadToUser({
-          leadId: leadId,
-          userId: localSelectedUserId,
-        })
+        assignTravelAdvisor({
+          leadId,
+          travelAdvisorId: selectedAdvisorId, // advisor_id → travelAdvisorId
+        }),
       ).unwrap();
 
-      alert("Lead assigned successfully!");
+      alert("Assigned Successfully ✅");
       onClose();
-      dispatch(resetAssignState());
     } catch (err) {
-      console.error("Assignment failed", err);
-      alert(assignError || "Assignment failed");
+      console.error(err);
+      alert("Assignment failed ❌");
     }
   };
 
   if (!isOpen) return null;
 
-  const overlayStyle: React.CSSProperties = {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    backdropFilter: "blur(4px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-  };
-
-  const modalStyle: React.CSSProperties = {
-    backgroundColor: "#ffffff",
-    padding: "28px 24px",
-    borderRadius: "16px",
-    minWidth: "420px",
-    maxWidth: "520px",
-    maxHeight: "85vh",
-    overflowY: "auto",
-    boxShadow: "0 20px 35px -8px rgba(0,0,0,0.2)",
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  };
-
-  const headerStyle: React.CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "20px",
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: "1.35rem",
-    fontWeight: 600,
-    color: "#1e293b",
-    margin: 0,
-  };
-
-  const closeButtonStyle: React.CSSProperties = {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "1.5rem",
-    lineHeight: 1,
-    color: "#64748b",
-    padding: "4px 8px",
-    borderRadius: "8px",
-    transition: "background 0.2s",
-  };
-
-  const listStyle: React.CSSProperties = {
-    listStyle: "none",
-    padding: 0,
-    margin: "0 0 20px 0",
-    maxHeight: "300px",
-    overflowY: "auto",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    backgroundColor: "#ffffff",
-  };
-
-  const listItemStyle: React.CSSProperties = {
-    padding: "12px 16px",
-    borderBottom: "1px solid #f1f5f9",
-    transition: "background 0.2s",
-    cursor: "pointer",
-    backgroundColor: "white",
-  };
-
-  const radioStyle: React.CSSProperties = {
-    marginRight: "12px",
-    accentColor: "#2563eb",
-    width: "18px",
-    height: "18px",
-    cursor: "pointer",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    fontSize: "0.95rem",
-    color: "#1e293b",
-    cursor: "pointer",
-    width: "100%",
-  };
-
-  const userEmailStyle: React.CSSProperties = {
-    fontSize: "0.85rem",
-    color: "#64748b",
-    marginLeft: "6px",
-    fontWeight: 400,
-  };
-
-  const buttonContainerStyle: React.CSSProperties = {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "12px",
-    marginTop: "24px",
-  };
-
-  const primaryButtonStyle: React.CSSProperties = {
-    backgroundColor: "#2563eb",
-    color: "white",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "10px",
-    fontSize: "0.95rem",
-    fontWeight: 500,
-    cursor: !localSelectedUserId || assignLoading ? "not-allowed" : "pointer",
-    opacity: !localSelectedUserId || assignLoading ? 0.6 : 1,
-    transition: "background 0.2s, transform 0.1s",
-    boxShadow: "0 4px 6px -1px rgba(37,99,235,0.2)",
-  };
-
-  const secondaryButtonStyle: React.CSSProperties = {
-    backgroundColor: "transparent",
-    color: "#475569",
-    border: "1px solid #cbd5e1",
-    padding: "10px 20px",
-    borderRadius: "10px",
-    fontSize: "0.95rem",
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "background 0.2s",
-  };
-
-  const loadingStyle: React.CSSProperties = {
-    textAlign: "center",
-    padding: "30px",
-    color: "#64748b",
-  };
-
-  const errorStyle: React.CSSProperties = {
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    padding: "12px",
-    borderRadius: "8px",
-    marginBottom: "16px",
-  };
-
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={headerStyle}>
-          <h3 style={titleStyle}>Assign Lead to Sales User</h3>
-          <button onClick={onClose} style={closeButtonStyle} aria-label="Close">
-            ✕
-          </button>
+    // 🔥 Overlay
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* 🔥 Modal */}
+      <div
+        className="w-full max-w-md p-6 bg-white rounded-2xl shadow-xl animate-fadeIn"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Assign Travel Advisor
+        </h2>
+
+        {/* Loading */}
+        {loading && (
+          <p className="text-sm text-gray-500">Loading advisors...</p>
+        )}
+
+        {/* Empty */}
+        {!loading && advisors.length === 0 && (
+          <p className="text-sm text-red-500">No advisors found</p>
+        )}
+
+        {/* Advisors List */}
+        <div className="max-h-60 overflow-y-auto space-y-2">
+          {advisors.map((advisor: any) => (
+            <label
+              key={advisor.id}
+              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition
+                ${
+                  selectedAdvisorId === advisor.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "hover:bg-gray-50"
+                }`}
+            >
+              <input
+                type="radio"
+                name="advisor"
+                value={advisor.id}
+                checked={selectedAdvisorId === advisor.id}
+                onChange={() => setSelectedAdvisorId(advisor.id)}
+                className="accent-blue-600"
+              />
+
+              <span className="text-sm font-medium text-gray-700">
+                {advisor.fullName || advisor.name}
+              </span>
+            </label>
+          ))}
         </div>
 
-        {loading && (
-          <div style={loadingStyle}>
-            <div>Loading sales users...</div>
-          </div>
-        )}
+        {/* Buttons */}
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+          >
+            Cancel
+          </button>
 
-        {(error || assignError) && (
-          <div style={errorStyle}>
-            {error || assignError || "Failed to load users. Please try again."}
-          </div>
-        )}
-
-        {salesUsers && salesUsers.length > 0 && (
-          <>
-            <ul style={listStyle}>
-              {salesUsers.map((user: User) => (
-                <li
-                  key={user.uuid}
-                  style={listItemStyle}
-                  onClick={() => handleRadioChange(user.uuid)}
-                >
-                  <label style={labelStyle}>
-                    <input
-                      type="radio"
-                      name="salesUser"
-                      value={user.uuid}
-                      checked={localSelectedUserId === user.uuid}
-                      onChange={(e) => handleRadioChange(e.target.value)}
-                      style={radioStyle}
-                    />
-                    <span>
-                      {user.name}
-                      <span style={userEmailStyle}>({user.email})</span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-
-            <div style={buttonContainerStyle}>
-              <button onClick={onClose} style={secondaryButtonStyle}>
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={assignLoading || !localSelectedUserId}
-                style={primaryButtonStyle}
-              >
-                {assignLoading ? "Assigning..." : "Assign Lead"}
-              </button>
-            </div>
-          </>
-        )}
-
-        {!loading && (!salesUsers || salesUsers.length === 0) && (
-          <div style={loadingStyle}>No sales users available</div>
-        )}
+          <button
+            onClick={handleAssign}
+            disabled={!selectedAdvisorId || assignLoading}
+            className={`px-4 py-2 text-sm text-white rounded-lg transition
+              ${
+                !selectedAdvisorId || assignLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+          >
+            {assignLoading ? "Assigning..." : "Assign"}
+          </button>
+        </div>
       </div>
     </div>
   );

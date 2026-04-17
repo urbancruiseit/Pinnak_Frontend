@@ -125,12 +125,15 @@ export interface LeadRecord {
   lostReasonDetails?: string;
   followUp?: string;
   customerCity?: string;
+  customerAddress?: string;
+  customerState?: string;
   vehicle3Quantity?: number;
   vehicle2Quantity?: number;
   vehicle1Quantity?: number;
   unwanted_status?: "wanted" | "unwanted";
   state?: string;
   customercity?: string;
+  city_id?: string;
 }
 export type UserRole =
   | "user"

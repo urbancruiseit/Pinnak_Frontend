@@ -1,154 +1,109 @@
-// features/access/accessSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import type { User } from "@/types/types";
-import { baseApi } from "@/uitils/commonApi";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  assignTravelAdvisorApi,
+  getTravelAdvisorsByCityApi,
+} from "./accessApi";
 
-interface AssignState {
-  salesUsers: User[];
+// 🔹 Types
+interface TravelAdvisor {
+  id: number;
+  fullName: string;
+}
+
+interface TravelAdvisorState {
+  advisors: TravelAdvisor[];
   loading: boolean;
   error: string | null;
   assignLoading: boolean;
-  assignError: string | null;
-  selectedUserId: string | null; // Single user selection
+  assignSuccess: boolean;
 }
 
-const initialState: AssignState = {
-  salesUsers: [],
+// 🔹 Initial State
+const initialState: TravelAdvisorState = {
+  advisors: [],
   loading: false,
   error: null,
   assignLoading: false,
-  assignError: null,
-  selectedUserId: null,
+  assignSuccess: false,
 };
 
-// Fetch all sales users
-export const fetchSalesUsers = createAsyncThunk<
-  User[],
-  void,
+//
+// ✅ 1. Fetch Advisors
+//
+export const fetchTravelAdvisors = createAsyncThunk<
+  TravelAdvisor[],
+  number,
   { rejectValue: string }
->("assign/fetchSalesUsers", async (_, { rejectWithValue }) => {
+>("travelAdvisor/fetchByCity", async (cityId, { rejectWithValue }) => {
   try {
-    const response = await fetch(`${baseApi}/user/sales`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to fetch sales users");
-    }
-    
-    if (!data.data || !Array.isArray(data.data)) {
-      return [];
-    }
-    
-    return data.data;
-    
+    return await getTravelAdvisorsByCityApi(cityId);
   } catch (error: any) {
-    console.error("Error fetching sales users:", error);
     return rejectWithValue(error.message);
   }
 });
 
-// Assign lead to single user (Simple Assignment)
-export const assignLeadToUser = createAsyncThunk<
-  void,
-  { leadId: string; userId: string },
+//
+// ✅ 2. Assign Advisor
+//
+export const assignTravelAdvisor = createAsyncThunk<
+  { success: boolean; leadId: number; travelAdvisorId: number },
+  { leadId: number; travelAdvisorId: number },
   { rejectValue: string }
->("assign/assignLeadToUser", async ({ leadId, userId }, { rejectWithValue }) => {
-  try {
-    const response = await fetch(`${baseApi}/assign/assign`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        leadId: leadId,
-        userId: userId,
-      }),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || "Assignment failed");
+>(
+  "travelAdvisor/assign",
+  async ({ leadId, travelAdvisorId }, { rejectWithValue }) => {
+    try {
+      return await assignTravelAdvisorApi(leadId, travelAdvisorId);
+    } catch (error: any) {
+      return rejectWithValue(error.message);
     }
-    
-    return data;
-    
-  } catch (error: any) {
-    console.error("Error assigning lead:", error);
-    return rejectWithValue(error.message);
-  }
-});
+  },
+);
 
-const assignSlice = createSlice({
-  name: "assign",
+//
+// ✅ Slice
+//
+const travelAdvisorSlice = createSlice({
+  name: "travelAdvisor",
   initialState,
   reducers: {
-    setSelectedUser: (state, action: PayloadAction<string>) => {
-      state.selectedUserId = action.payload;
-    },
-    clearSelectedUser: (state) => {
-      state.selectedUserId = null;
-    },
-    clearAssignError: (state) => {
-      state.assignError = null;
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
     resetAssignState: (state) => {
-      state.salesUsers = [];
-      state.loading = false;
-      state.error = null;
-      state.assignLoading = false;
-      state.assignError = null;
-      state.selectedUserId = null;
+      state.assignSuccess = false;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch sales users
-      .addCase(fetchSalesUsers.pending, (state) => {
+
+      // 🔹 Fetch Advisors
+      .addCase(fetchTravelAdvisors.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchSalesUsers.fulfilled, (state, action: PayloadAction<User[]>) => {
+      .addCase(fetchTravelAdvisors.fulfilled, (state, action) => {
         state.loading = false;
-        state.salesUsers = action.payload;
+        state.advisors = action.payload;
       })
-      .addCase(fetchSalesUsers.rejected, (state, action) => {
+      .addCase(fetchTravelAdvisors.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload || "Failed to fetch advisors";
       })
-      // Assign lead to user
-      .addCase(assignLeadToUser.pending, (state) => {
+
+      // 🔹 Assign Advisor
+      .addCase(assignTravelAdvisor.pending, (state) => {
         state.assignLoading = true;
-        state.assignError = null;
+        state.assignSuccess = false;
       })
-      .addCase(assignLeadToUser.fulfilled, (state) => {
+      .addCase(assignTravelAdvisor.fulfilled, (state) => {
         state.assignLoading = false;
-        state.selectedUserId = null;
+        state.assignSuccess = true;
       })
-      .addCase(assignLeadToUser.rejected, (state, action) => {
+      .addCase(assignTravelAdvisor.rejected, (state, action) => {
         state.assignLoading = false;
-        state.assignError = action.payload as string;
+        state.error = action.payload || "Failed to assign advisor";
       });
   },
 });
 
-export const { 
-  setSelectedUser, 
-  clearSelectedUser, 
-  clearAssignError, 
-  clearError,
-  resetAssignState 
-} = assignSlice.actions;
+export const { resetAssignState } = travelAdvisorSlice.actions;
 
-export default assignSlice.reducer;
+export default travelAdvisorSlice.reducer;

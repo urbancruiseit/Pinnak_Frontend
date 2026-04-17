@@ -5,7 +5,7 @@ import countryReducer from "../features/countrycode/countrycodeSlice";
 import vehicleReducer from "../features/vehicle/vehicleSlice";
 import travelcityReducer from "../features/travelcity/travelcitySlice";
 import stateCityReducer from "../features/State/stateSlice";
-import assignReducer from "../features/access/accessSlice";
+import travelAdvisorReducer from "../features/access/accessSlice";
 import NewcustomerReducer from "../features/NewCustomer/NewCustomerSlice";
 import vendorReducer from "../features/vendor/vendorSlice";
 import driverReducer from "../features/Driver/driverSlice";
@@ -18,7 +18,7 @@ export const store = configureStore({
     vehicle: vehicleReducer,
     travelcity: travelcityReducer,
     stateCity: stateCityReducer,
-    assign: assignReducer,
+    travelAdvisor: travelAdvisorReducer,
     newCustomer: NewcustomerReducer,
     vendor: vendorReducer,
     driver: driverReducer,

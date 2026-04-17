@@ -125,18 +125,17 @@ export default function LeadsTable() {
 
   // Assign Sales Modal state and handlers
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLead, setSelectedLead] = useState<LeadRecord | null>(null);
 
-  const handleAssignClick = (leadId: string) => {
-    setSelectedLeadId(leadId);
+  const handleAssignClick = (lead: LeadRecord) => {
+    setSelectedLead(lead);
     setIsAssignModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsAssignModalOpen(false);
-    setSelectedLeadId(null);
+    setSelectedLead(null);
   };
-
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 14;
 
@@ -190,10 +189,11 @@ export default function LeadsTable() {
   useEffect(() => {
     const handleAssignLead = (event: Event) => {
       const customEvent = event as CustomEvent<LeadRecord>;
-      if (customEvent.detail?.id) {
-        handleAssignClick(customEvent.detail.id);
+      if (customEvent.detail) {
+        handleAssignClick(customEvent.detail); // 🔥 full lead pass karo
       }
     };
+
     window.addEventListener("assignLead", handleAssignLead);
     return () => window.removeEventListener("assignLead", handleAssignLead);
   }, []);
@@ -599,7 +599,7 @@ export default function LeadsTable() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="border-l-8 border rounded-lg border-orange-500 bg-white px-3">
               <h2 className="text-2xl md:text-4xl font-bold text-left text-orange-600 whitespace-nowrap">
-                Lead Table
+                Lead Manager
               </h2>
               <p className="mt-1 text-sm text-left text-orange-700">
                 Leads Details & Status.
@@ -769,11 +769,12 @@ export default function LeadsTable() {
         />
       )}
 
-      {isAssignModalOpen && selectedLeadId && (
+      {isAssignModalOpen && selectedLead && (
         <AssignSalesModal
           isOpen={isAssignModalOpen}
           onClose={handleCloseModal}
-          leadId={selectedLeadId}
+          leadId={selectedLead.id}
+          cityId={selectedLead.city_id} // 🔥 correct
         />
       )}
     </>

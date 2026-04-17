@@ -1,4 +1,4 @@
-import { LeadRecord } from "../../types/types";
+import type { LeadRecord } from "../types";
 import { LeadFormData } from "./editleadschema";
 
 // Parse phone number
@@ -161,9 +161,17 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
   const mainPhone = parsePhone(initialData.customerPhone || "");
   const altPhone = parsePhone(initialData.alternatePhone || "");
 
+  // Split customer name into first, middle, last
+  const nameParts = (initialData.customerName || "").trim().split(" ");
+  const firstName = nameParts[0] || "";
+  const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+
   return {
     formData: {
-      name: initialData.customerName || "",
+      firstName,
+      middleName,
+      lastName,
       phone: mainPhone.number,
       alternatePhone: altPhone.number,
       email: initialData.customerEmail || "",
@@ -171,6 +179,8 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
         initialData.customerType === "Personal"
           ? "C"
           : initialData.companyName || "",
+      // Legacy fields for salesEditLeadForm
+      name: initialData.customerName || "",
     },
     alternateCountryCode: altPhone.code,
     customerCategoryTypeValue: initialData.customerCategoryType || "",
@@ -212,9 +222,12 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
       lost_reason: initialData.lost_reason || "",
       lostReasonDetails: initialData.lostReasonDetails || "",
       followUp: initialData.followUp || "",
-      countryName: initialData.countryName || "",
+      countryName: initialData.countryName || initialData.customerCountry || "",
       city: initialData.city || "",
       itinerary: initialData.itinerary || [],
+      customerCity: initialData.customerCity || "",
+      customerState: initialData.customerState || "",
+      customerAddress: initialData.customerAddress || "",
     },
   };
 };

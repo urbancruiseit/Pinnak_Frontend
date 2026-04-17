@@ -1031,7 +1031,7 @@ export default function LeadsTable() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className=" border-l-8 border-orange-500 bg-white px-3">
               <h2 className="text-2xl md:text-4xl font-bold text-left text-orange-600">
-                Sales Lead Table
+                Sales Lead Manager
               </h2>
               <p className="mt-1 text-sm text-left text-orange-700">
                 Leads Details & Status.

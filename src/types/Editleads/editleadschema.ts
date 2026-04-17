@@ -20,6 +20,9 @@ export const leadSchema = z.object({
   customerType: z.enum(["Personal", "Corporate", "Travel Agent"]),
   customerCategoryType: z.string().optional(),
   countryName: z.string().min(1, "Country is required"),
+  customerCity: z.string().optional(),
+  customerState: z.string().optional(),
+  customerAddress: z.string().optional(),
   serviceType: z
     .enum([
       "One Way",

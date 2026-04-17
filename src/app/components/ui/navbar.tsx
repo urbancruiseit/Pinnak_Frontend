@@ -96,7 +96,7 @@ const MASTER_MENU_SECTIONS: MenuSection[] = [
 const LEADS_MENU: MenuSection = {
   key: "leads-menu",
   label: "Leads List",
-  items: [{ label: "Lead Table", value: "lead-table" }],
+  items: [{ label: "Lead Manager", value: "lead-table" }],
 };
 
 const ACCESS_MENU: MenuSection = {
@@ -128,7 +128,7 @@ const YEAR_MENU: MenuSection = {
 const SALES_MENU: MenuSection = {
   key: "sales-menu",
   label: "SALES",
-  items: [{ label: "Sales Lead Table", value: "sales-lead-table" }],
+  items: [{ label: "Sales Lead Manager", value: "sales-lead-table" }],
 };
 
 // Fallback static data (used only when user data not available)
@@ -237,11 +237,11 @@ const getMenuIcon = (menuKey: string, label: string) => {
     return <UserCircle size={16} className="mr-1.5" />;
   if (menuKey.includes("access"))
     return <Shield size={16} className="mr-1.5" />;
-  if (label === "New Lead Form" || label === "Lead Table")
+  if (label === "New Lead Form" || label === "Lead Manager")
     return <FileText size={16} className="mr-1.5" />;
   if (label === "Dashboards")
     return <LayoutDashboard size={16} className="mr-1.5" />;
-  if (label === "Sales Lead Table")
+  if (label === "Sales Lead Manager")
     return <Users size={16} className="mr-1.5" />;
   return null;
 };
@@ -529,7 +529,7 @@ export function Navbar({
                         onClick={() => onLeadSelect?.("lead-table")}
                       >
                         <FileText size={16} className="mr-1.5 flex-shrink-0" />
-                        <span className="truncate">Lead Table</span>
+                        <span className="truncate">Lead Manager</span>
                       </button>
                     </div>
                   )}
@@ -562,7 +562,7 @@ export function Navbar({
                       onClick={() => onSalesLeadSelect?.("sales-lead-table")}
                     >
                       <FileText size={16} className="mr-1.5 flex-shrink-0" />
-                      <span className="truncate">Sales Lead Table</span>
+                      <span className="truncate">Sales Lead Manager</span>
                     </button>
                   </div>
                 )}
