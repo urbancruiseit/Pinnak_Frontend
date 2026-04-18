@@ -1,5 +1,5 @@
 import axiosInstance from "@/uitils/axioInstance";
-
+import type { LeadRecord } from "@/types/types";
 // 🔹 Types (agar already defined nahi hai to add karo)
 interface TravelAdvisor {
   id: number;
@@ -79,6 +79,39 @@ export const assignTravelAdvisorApi = async (
       error?.response?.data?.error ||
       error.message ||
       "Failed to assign travel advisor";
+
+    throw new Error(errorMessage);
+  }
+};
+
+export interface AssignedLeadsResponse {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  leads: LeadRecord[];
+}
+
+export const getMyAssignedLeadsApi = async (
+  page: number = 1,
+): Promise<AssignedLeadsResponse> => {
+  try {
+    const response = await axiosInstance.get<
+      ApiResponse<AssignedLeadsResponse>
+    >(`/assign/myleads?page=${page}`);
+
+    const data = response?.data?.data;
+
+    if (!data) throw new Error("Invalid response from server");
+
+    return data;
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error.message ||
+      "Failed to fetch assigned leads";
 
     throw new Error(errorMessage);
   }

@@ -24,6 +24,11 @@ import { AppDispatch, RootState } from "@/app/redux/store";
 import { getCountriesThunk } from "@/app/features/countrycode/countrycodeSlice";
 import { fetchVehicles } from "@/app/features/vehicle/vehicleSlice";
 import { getAllCitiesThunk } from "@/app/features/travelcity/travelcitySlice";
+import {
+  fetchAllCities,
+  fetchStatesByCity,
+  resetStatesForCity,
+} from "@/app/features/State/stateSlice";
 
 // ── Import from our 4 files ──────────────────────────────────────────────────
 import {
@@ -49,56 +54,6 @@ import {
   calculateTotalVehicles,
 } from "../../../../../../types/Editleads/editleadcalculations";
 
-// ── Static country list with states & cities ─────────────────────────────────
-// You can replace this with your own API / Redux slice if available.
-// Structure: country → cities → states per city
-const COUNTRY_CITY_STATE: Record<string, Record<string, string[]>> = {
-  India: {
-    Mumbai: ["Maharashtra"],
-    Delhi: ["Delhi"],
-    Bangalore: ["Karnataka"],
-    Hyderabad: ["Telangana"],
-    Chennai: ["Tamil Nadu"],
-    Kolkata: ["West Bengal"],
-    Pune: ["Maharashtra"],
-    Ahmedabad: ["Gujarat"],
-    Jaipur: ["Rajasthan"],
-    Lucknow: ["Uttar Pradesh"],
-    Surat: ["Gujarat"],
-    Kanpur: ["Uttar Pradesh"],
-    Nagpur: ["Maharashtra"],
-    Indore: ["Madhya Pradesh"],
-    Bhopal: ["Madhya Pradesh"],
-    Patna: ["Bihar"],
-    Vadodara: ["Gujarat"],
-    Ghaziabad: ["Uttar Pradesh"],
-    Ludhiana: ["Punjab"],
-    Agra: ["Uttar Pradesh"],
-    Nashik: ["Maharashtra"],
-    Faridabad: ["Haryana"],
-    Meerut: ["Uttar Pradesh"],
-    Rajkot: ["Gujarat"],
-    Varanasi: ["Uttar Pradesh"],
-    Amritsar: ["Punjab"],
-    Allahabad: ["Uttar Pradesh"],
-    Ranchi: ["Jharkhand"],
-    Howrah: ["West Bengal"],
-    Coimbatore: ["Tamil Nadu"],
-    Vijayawada: ["Andhra Pradesh"],
-    Chandigarh: ["Punjab"],
-    Mysore: ["Karnataka"],
-    Guwahati: ["Assam"],
-    Dehradun: ["Uttarakhand"],
-    Jodhpur: ["Rajasthan"],
-    Madurai: ["Tamil Nadu"],
-    Raipur: ["Chhattisgarh"],
-    Kochi: ["Kerala"],
-    Thiruvananthapuram: ["Kerala"],
-    Gurgaon: ["Haryana"],
-    Noida: ["Uttar Pradesh"],
-  },
-};
-
 // ────────────────────────────────────────────────────────────────────────────
 const EditLeadForm: React.FC<{
   initialData: LeadRecord;
@@ -111,6 +66,9 @@ const EditLeadForm: React.FC<{
   const { countries } = useSelector((state: RootState) => state.country);
   const { vehicleCodes } = useSelector((state: RootState) => state.vehicle);
   const { travelcity } = useSelector((state: RootState) => state.travelcity);
+  const { cities, statesForCity, citiesLoading, statesLoading } = useSelector(
+    (state: RootState) => state.stateCity,
+  );
 
   // ── React Hook Form ──────────────────────────────────────────────────────
   const {
@@ -148,8 +106,6 @@ const EditLeadForm: React.FC<{
 
   // Country / City / State local state
   const [selectedCountry, setSelectedCountry] = useState<string>("");
-  const [citiesLoading, setCitiesLoading] = useState(false);
-  const [statesLoading, setStatesLoading] = useState(false);
 
   // ── Watched form fields ──────────────────────────────────────────────────
   const pickupDateTime = watch("pickupDateTime");
@@ -168,38 +124,22 @@ const EditLeadForm: React.FC<{
   const vehicle3 = watch("vehicle3");
   const vehicle3Quantity = watch("vehicle3Quantity");
 
-  // ── Derived: cities list for selected country ───────────────────────────
-  const citiesForCountry: string[] = useMemo(() => {
-    if (selectedCountry === "India") {
-      return Object.keys(COUNTRY_CITY_STATE["India"]);
-    }
-    return [];
-  }, [selectedCountry]);
-
-  // ── Derived: states list for selected city ──────────────────────────────
-  const statesForCity: string[] = useMemo(() => {
-    if (selectedCountry === "India" && customerCity) {
-      return COUNTRY_CITY_STATE["India"][customerCity] ?? [];
-    }
-    return [];
-  }, [selectedCountry, customerCity]);
-
   const isIndia = selectedCountry === "India";
 
   // ── Fetch Redux data on mount ────────────────────────────────────────────
   useEffect(() => {
     dispatch(getCountriesThunk());
-    dispatch(getAllCitiesThunk());
+    dispatch(fetchAllCities());
     dispatch(fetchVehicles());
   }, [dispatch]);
 
   // ── Auto-calculate total baggage ─────────────────────────────────────────
   useEffect(() => {
     const total = calculateTotalBaggage(
-      Number(smallbaggage),
-      Number(mediumbaggage),
-      Number(largebaggage),
-      Number(airportbaggage),
+      Number(smallbaggage) || 0,
+      Number(mediumbaggage) || 0,
+      Number(largebaggage) || 0,
+      Number(airportbaggage) || 0,
     );
     setValue("totalbaggage", total);
   }, [smallbaggage, mediumbaggage, largebaggage, airportbaggage, setValue]);
@@ -231,10 +171,15 @@ const EditLeadForm: React.FC<{
     setValue,
   ]);
 
-  // ── When city changes → reset state ─────────────────────────────────────
+  // ── When city changes → fetch and reset state ───────────────────────────────
   useEffect(() => {
+    if (customerCity) {
+      dispatch(fetchStatesByCity(customerCity));
+    } else {
+      dispatch(resetStatesForCity());
+    }
     setValue("customerState", "");
-  }, [customerCity, setValue]);
+  }, [customerCity, dispatch, setValue]);
 
   // ── Initialize form with initialData (auto-fetch / edit mode) ────────────
   useEffect(() => {
@@ -260,7 +205,6 @@ const EditLeadForm: React.FC<{
       setValue(key as keyof LeadFormData, value as any);
     });
 
-    // Explicitly set country-related fields that mapper may not cover
     if (country) setValue("countryName" as any, country);
     if ((initialData as any).customerCity)
       setValue("customerCity", (initialData as any).customerCity);
@@ -269,7 +213,6 @@ const EditLeadForm: React.FC<{
     if ((initialData as any).customerAddress)
       setValue("customerAddress", (initialData as any).customerAddress);
 
-    // Trigger validation after populating
     setTimeout(() => trigger(), 150);
   }, [initialData, setValue, trigger]);
 
@@ -808,7 +751,6 @@ const EditLeadForm: React.FC<{
                 )}
               </div>
 
-              {/* ── Customer City (only India) ──────────────────────────────── */}
               {isIndia && (
                 <div>
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
@@ -823,10 +765,17 @@ const EditLeadForm: React.FC<{
                       {...register("customerCity")}
                       className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md"
                     >
-                      <option value="">Select Customer City</option>
-                      {citiesForCountry.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
+                      <option value="">
+                        {citiesLoading
+                          ? "Loading cities..."
+                          : "Select Customer City"}
+                      </option>
+                      {cities?.map((city) => (
+                        <option
+                          key={city.id || city.uuid}
+                          value={city.cityName}
+                        >
+                          {city.cityName}
                         </option>
                       ))}
                     </select>
@@ -838,7 +787,6 @@ const EditLeadForm: React.FC<{
                 </div>
               )}
 
-              {/* ── Customer State (only India, after city selected) ──────── */}
               {isIndia && (
                 <div>
                   <label className="block text-md font-extrabold text-gray-700 mb-1">
@@ -854,14 +802,10 @@ const EditLeadForm: React.FC<{
                       disabled={!customerCity}
                       className="w-full py-2 border bg-white pl-10 pr-3 border-gray-300 rounded-md disabled:bg-gray-100"
                     >
-                      <option value="">
-                        {!customerCity
-                          ? "Please select a city first"
-                          : "Select Customer State"}
-                      </option>
-                      {statesForCity.map((state) => (
-                        <option key={state} value={state}>
-                          {state}
+                      <option value="">Select State</option>
+                      {statesForCity?.map((state) => (
+                        <option key={state.id} value={state.stateName}>
+                          {state.stateName}
                         </option>
                       ))}
                     </select>
@@ -998,7 +942,11 @@ const EditLeadForm: React.FC<{
                           type="number"
                           {...register("days", { valueAsNumber: true })}
                           readOnly={serviceType === "Pick & Drop"}
-                          className={`w-full ${serviceType === "Pick & Drop" ? "bg-purple-400" : "bg-purple-600"} text-white font-extrabold text-2xl py-2 text-center border border-gray-300 rounded-md`}
+                          className={`w-full ${
+                            serviceType === "Pick & Drop"
+                              ? "bg-purple-400"
+                              : "bg-purple-600"
+                          } text-white font-extrabold text-2xl py-2 text-center border border-gray-300 rounded-md`}
                           placeholder="Days"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white font-bold text-xs">
@@ -1184,7 +1132,7 @@ const EditLeadForm: React.FC<{
                           const draggedIdx = parseInt(
                             e.dataTransfer.getData("text/plain"),
                           );
-                          if (draggedIdx !== idx)
+                          if (!isNaN(draggedIdx) && draggedIdx !== idx)
                             reorderItinerary(draggedIdx, idx);
                         }}
                       >
@@ -1337,7 +1285,7 @@ const EditLeadForm: React.FC<{
                     <div className="relative">
                       <input
                         type="number"
-                        {...register(baggage as any, { valueAsNumber: true })}
+                        {...register(baggage, { valueAsNumber: true })}
                         className="w-full py-2 bg-white pl-10 pr-3 border border-gray-300 rounded-md"
                         placeholder="0"
                         min="0"
@@ -1403,7 +1351,7 @@ const EditLeadForm: React.FC<{
                     <input
                       type="number"
                       placeholder="Qty"
-                      min="1"
+                      min="0"
                       className="w-20 py-2 border border-gray-300 rounded-md text-center"
                       {...register("vehicle1Quantity", { valueAsNumber: true })}
                     />
@@ -1438,7 +1386,7 @@ const EditLeadForm: React.FC<{
                     <input
                       type="number"
                       placeholder="Qty"
-                      min="1"
+                      min="0"
                       className="w-20 py-2 border border-gray-300 rounded-md text-center"
                       {...register("vehicle2Quantity", { valueAsNumber: true })}
                     />
@@ -1473,7 +1421,7 @@ const EditLeadForm: React.FC<{
                     <input
                       type="number"
                       placeholder="Qty"
-                      min="1"
+                      min="0"
                       className="w-20 py-2 border border-gray-300 rounded-md text-center"
                       {...register("vehicle3Quantity", { valueAsNumber: true })}
                     />
@@ -1594,7 +1542,10 @@ const EditLeadForm: React.FC<{
                   {Object.entries(errors)
                     .slice(0, 5)
                     .map(([key, error]: any) => (
-                      <li key={key}>{error?.message ?? `${key} is invalid`}</li>
+                      <li key={key}>
+                        <span className="font-semibold">{key}</span>:{" "}
+                        {error?.message || "is invalid"}
+                      </li>
                     ))}
                 </ul>
               </div>

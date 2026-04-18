@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import userAvatar from "../../assets/user-pic.png";
-import siteIcon from "../../assets/SITE-ICON.png";
 import pinaak from "../../assets/pinnak.png";
 import { AppDispatch, RootState } from "@/app/redux/store";
 
@@ -289,11 +288,40 @@ export function Navbar({
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser) {
+      console.log("Current User Data:", JSON.stringify(currentUser, null, 2));
+    }
+  }, [currentUser]);
+
   // ✅ currentUser se region, zone, city nikalo
   const userRegionNames = (currentUser as any)?.region_names ?? [];
   const userZoneNames = (currentUser as any)?.zone_names ?? [];
   const userCityNames = (currentUser as any)?.city_names ?? [];
   const userCityIds = (currentUser as any)?.city_ids ?? [];
+
+  // ✅ currentUser se email, department, subDepartment nikalo
+  const rawUser = (currentUser as any) ?? {};
+  const userData = rawUser?.data ?? rawUser;
+  const userEmail =
+    rawUser?.personalEmail ??
+    userData?.personalEmail ??
+    rawUser?.user_email ??
+    "";
+  const userDepartment =
+    rawUser?.department ??
+    userData?.department ??
+    rawUser?.dept_name ??
+    userData?.dept_name ??
+    "";
+  const userSubDepartment =
+    rawUser?.subDepartment_name ??
+    userData?.subDepartment_name ??
+    rawUser?.sub_department ??
+    userData?.sub_department ??
+    rawUser?.subdept_name ??
+    userData?.subdept_name ??
+    "";
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
@@ -701,9 +729,7 @@ export function Navbar({
             )}
           </div>
 
-          {/* Right Section - Region, Zone, City, Year, User */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:ml-auto md:gap-2 lg:gap-3">
-            {/* ✅ Region Select — user ke assigned regions */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
                 value={selectedRegion}
@@ -711,22 +737,24 @@ export function Navbar({
                 className="w-full px-3 py-2.5 pr-8 text-sm font-semibold text-gray-700 bg-white border border-orange-500 rounded-full focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-200 appearance-none cursor-pointer hover:border-orange-300 transition-all md:h-9 md:py-2"
               >
                 <option value="">Region</option>
-                {(userRegionNames && userRegionNames.length > 0
-                  ? userRegionNames
-                  : FALLBACK_REGIONS
-                ).map((region: string) => (
-                  <option key={region} value={region}>
-                    {region}
-                  </option>
-                ))}
+
+                {userRegionNames?.length > 0 ? (
+                  userRegionNames.map((region: string) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>No Region Assigned</option>
+                )}
               </select>
+
               <MapPin
                 size={14}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-orange-500 transition-colors"
               />
             </div>
 
-            {/* ✅ Zone Select — user ke assigned zones */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
                 value={selectedZone}
@@ -749,7 +777,6 @@ export function Navbar({
               />
             </div>
 
-            {/* ✅ City Select — user ke assigned cities, value = city_id */}
             <div className="relative group w-full md:w-28 lg:w-32">
               <select
                 value={selectedCity}
@@ -778,7 +805,6 @@ export function Navbar({
               />
             </div>
 
-            {/* Year Select */}
             {showYearMenu && (
               <div className="relative group w-full md:w-24 lg:w-28">
                 <select
@@ -800,84 +826,122 @@ export function Navbar({
               </div>
             )}
 
-            {/* User Menu - Desktop */}
-            <div className="hidden md:flex items-center">
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    setOpenMenu(openMenu === "user" ? null : "user")
-                  }
-                  className={`flex items-center gap-2 rounded-full bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-sm border-2 transition-all duration-200 hover:shadow-md hover:scale-[1.02]
+            <div className="relative">
+              <button
+                onClick={() => setOpenMenu(openMenu === "user" ? null : "user")}
+                className={`flex items-center gap-2 rounded-full bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-sm border-2 transition-all duration-200 hover:shadow-md hover:scale-[1.02]
                     ${openMenu === "user" ? "border-orange-500 shadow-md" : "border-orange-300 hover:border-orange-500"}`}
-                >
-                  <Image
-                    src={userAvatar}
-                    alt="User"
-                    width={28}
-                    height={28}
-                    className="object-cover border-2 border-orange-500 rounded-full flex-shrink-0"
-                  />
-                  <div className="text-left hidden lg:block">
-                    <p className="text-sm font-semibold text-gray-800">
-                      {userName ?? "Guest"}
-                    </p>
-                    <p className="text-[11px] uppercase text-gray-500">
-                      {roleLabel}
-                    </p>
-                  </div>
-                  <ChevronDown
-                    size={14}
-                    className={`ml-1 transition-transform duration-200 flex-shrink-0 ${openMenu === "user" ? "rotate-180" : ""}`}
-                  />
-                </button>
+              >
+                <Image
+                  src={userAvatar}
+                  alt="User"
+                  width={28}
+                  height={28}
+                  className="object-cover border-2 border-orange-500 rounded-full flex-shrink-0"
+                />
+                <div className="text-left hidden lg:block">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {userName ?? "Guest"}
+                  </p>
+                  <p className="text-[11px] uppercase text-gray-500">
+                    {roleLabel}
+                  </p>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={`ml-1 transition-transform duration-200 flex-shrink-0 ${openMenu === "user" ? "rotate-180" : ""}`}
+                />
+              </button>
 
-                {openMenu === "user" && (
-                  <div className="absolute right-0 z-50 mt-2 bg-white border-2 border-orange-300 rounded-lg shadow-xl top-full w-48 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50 lg:hidden">
-                      <p className="text-sm font-medium text-gray-900">
+              {openMenu === "user" && (
+                <div className="absolute right-0 z-50 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-semibold text-gray-900">
                         {userName ?? "Guest"}
                       </p>
-                      <p className="text-xs text-gray-500">{roleLabel}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {userEmail || "guest@email.com"}
+                      </p>
+
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {userDepartment && (
+                          <span className="text-[11px] px-2 py-[2px] bg-blue-100 text-blue-700 rounded-full">
+                            {userDepartment}
+                          </span>
+                        )}
+                        {userSubDepartment && (
+                          <span className="text-[11px] px-2 py-[2px] bg-purple-100 text-purple-700 rounded-full">
+                            {userSubDepartment}
+                          </span>
+                        )}
+
+                        {roleLabel && (
+                          <span className="text-[11px] px-2 py-[2px] bg-green-100 text-green-700 rounded-full">
+                            {roleLabel}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {onLogout && (
-                      <button
-                        onClick={() => {
-                          onLogout();
-                          setOpenMenu(null);
-                        }}
-                        className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
-                      >
-                        <span className="w-1 h-1 rounded-full bg-orange-300"></span>
-                        Sign out
-                      </button>
-                    )}
-                    {onLogout && (
-                      <button
-                        onClick={() => {
-                          onLogout();
-                          setOpenMenu(null);
-                        }}
-                        className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
-                      >
-                        <span className="w-1 h-1 rounded-full bg-orange-300"></span>
-                        Reset Password
-                      </button>
-                    )}
-                    {onLogout && (
-                      <button
-                        onClick={() => {
-                          onLogout();
-                          setOpenMenu(null);
-                        }}
-                        className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
-                      >
-                        <span className="w-1 h-1 rounded-full bg-orange-300"></span>
-                        Profile
-                      </button>
-                    )}
                   </div>
-                )}
-              </div>
+                  <div className="px-4 py-3 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Role</span>
+                      <span className="text-gray-800 font-medium">
+                        {roleLabel || "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Department</span>
+                      <span className="text-gray-800 font-medium">
+                        {userDepartment || "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Sub Dept</span>
+                      <span className="text-gray-800 font-medium">
+                        {userSubDepartment || "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Region</span>
+                      <span className="text-gray-800 font-medium">
+                        {userRegionNames || "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Zone</span>
+                      <span className="text-gray-800 font-medium">
+                        {userZoneNames?.length ? userZoneNames.join(", ") : "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">City</span>
+                      <span className="text-gray-800 font-medium">
+                        {userCityNames?.length ? userCityNames.join(", ") : "-"}
+                      </span>
+                    </div>
+                  </div>
+                  {onLogout && (
+                    <button
+                      onClick={() => {
+                        onLogout();
+                        setOpenMenu(null);
+                      }}
+                      className="w-full px-4 py-2.5 md:py-2 text-sm text-left text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all hover:pl-6 flex items-center gap-2"
+                    >
+                      {" "}
+                      <span className="w-1 h-1 rounded-full bg-orange-300"></span>{" "}
+                      Sign out{" "}
+                    </button>
+                  )}{" "}
+                </div>
+              )}
             </div>
           </div>
         </div>

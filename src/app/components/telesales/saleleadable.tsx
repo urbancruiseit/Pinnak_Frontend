@@ -17,23 +17,18 @@ import type { LeadRecord } from "../../../types/types";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/app/redux/store";
-import { fetchLeads } from "@/app/features/lead/leadSlice";
+
 import Pagination from "../ui/pagination";
 import LeadDetailsModel from "../DetailModel/LeadModel/leadTabledetailsmodel";
 import {
-  BannerColumn,
   TABLE_BANNER_COLUMNS,
   BANNER_GROUP_LIGHT_BG_CLASS,
   BANNER_GROUP_BG_CLASS,
-  OCCASION_COLOR_MAP,
-  SERVICE_TYPE_COLOR_MAP,
   statusClassMap,
   LEAD_STATUS_OPTIONS,
   MONTH_OPTIONS,
-  LEAD_CUSTOMER_TYPES,
-  LEAD_SERVICE_TYPES,
-  LEAD_TRIP_TYPES,
 } from "../../../types/LeadsTable/leadstabledata";
+import { fetchMyAssignedLeads } from "@/app/features/access/accessSlice";
 
 const CITY_OPTIONS = [
   "Delhi",
@@ -163,8 +158,8 @@ export default function LeadsTable() {
   const rowsPerPage = 14;
 
   const dispatch = useDispatch<AppDispatch>();
-  const { leads, loading, error, totalPages, total } = useSelector(
-    (state: RootState) => state.lead,
+  const { leads, loading, error, page } = useSelector(
+    (state: RootState) => state.travelAdvisor.assignedLeads,
   );
 
   console.log(
@@ -175,7 +170,7 @@ export default function LeadsTable() {
   );
 
   useEffect(() => {
-    dispatch(fetchLeads(currentPage));
+    dispatch(fetchMyAssignedLeads(currentPage));
   }, [dispatch, currentPage]);
 
   const handlePageChange = (page: number) => {
@@ -184,7 +179,7 @@ export default function LeadsTable() {
 
   useEffect(() => {
     const handleLeadSubmitted = () => {
-      dispatch(fetchLeads(currentPage));
+      dispatch(fetchMyAssignedLeads(currentPage));
     };
     window.addEventListener("leadSubmitted", handleLeadSubmitted);
     return () =>
@@ -945,7 +940,7 @@ export default function LeadsTable() {
     </div>
   );
 
-  const totalLeadsCount = total || 0;
+  const totalLeadsCount = filteredLeads.length || 0;
   const blankLeads = filteredLeads.filter(
     (lead) => lead.status === "Blank",
   ).length;
@@ -1011,7 +1006,7 @@ export default function LeadsTable() {
             console.log("SalesEditLeadForm success callback");
             setDetailLead(null);
             setIsEditMode(false);
-            dispatch(fetchLeads(1));
+            dispatch(fetchMyAssignedLeads(1));
           }}
           onCancel={() => {
             console.log("SalesEditLeadForm cancel callback");
@@ -1388,7 +1383,7 @@ export default function LeadsTable() {
           {/* Use the Pagination component */}
           <Pagination
             currentPage={currentPage}
-            totalPages={totalPages || 1}
+            totalPages={page || 1}
             totalItems={totalLeadsCount}
             rowsPerPage={rowsPerPage}
             onPageChange={handlePageChange}

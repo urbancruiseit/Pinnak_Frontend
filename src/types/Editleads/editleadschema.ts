@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 export const leadSchema = z.object({
+  customer_id: z.number().optional(),
   date: z.string().min(1, "Date is required"),
   source: z.enum([
     "Call",
@@ -13,7 +14,7 @@ export const leadSchema = z.object({
     "REP-C",
     "REF-C",
   ]),
-  telesales: z.string().min(1, "Presales is required"),
+  telesales: z.string().optional(),
   status: z
     .enum(["New", "KYC", "RFQ", "HOT", "Book", "Veh-n", "Lost", "Blank"])
     .optional(),
@@ -37,9 +38,8 @@ export const leadSchema = z.object({
       "Local",
     ])
     .optional(),
-  tripType: z
-    .enum(["pickup", "drop", "both", "Sightseeing", "Point to Point"])
-    .optional(),
+  tripType: z.string().optional(),
+   
   occasion: z.string().optional(),
   pickupDateTime: z.string().min(1, "Pickup date is required"),
   dropDateTime: z.string().optional(),
@@ -58,9 +58,9 @@ export const leadSchema = z.object({
   vehicle2: z.string().optional(),
   vehicles: z.string().optional(),
   vehicle3: z.string().optional(),
-  vehicle1Quantity: z.number().optional(),
-  vehicle2Quantity: z.number().optional(),
-  vehicle3Quantity: z.number().optional(),
+  vehicle1Quantity: z.number().optional().default(0),
+  vehicle2Quantity: z.number().optional().default(0),
+  vehicle3Quantity: z.number().optional().default(0),
   requirementVehicle: z.string().optional(),
   km: z.string().min(1, "KM is required"),
   smallbaggage: z.number().optional(),

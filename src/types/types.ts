@@ -134,6 +134,11 @@ export interface LeadRecord {
   state?: string;
   customercity?: string;
   city_id?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  fullName?: string;
+  customerCountry?: string;
 }
 export type UserRole =
   | "user"

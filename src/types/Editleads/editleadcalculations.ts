@@ -12,93 +12,92 @@ export const parsePhone = (phone: string) => {
 };
 
 // Format date for input field
-export const formatDateTimeForInput = (dateStr: string | undefined): string => {
+export const formatDateTimeForInput = (dateStr?: string): string => {
   if (!dateStr) return "";
   let formatted = dateStr.replace(" ", "T");
+
   const tIndex = formatted.indexOf("T");
   if (tIndex !== -1) {
     const datePart = formatted.substring(0, tIndex);
     const timePart = formatted.substring(tIndex + 1);
-    const timeComponents = timePart.split(":");
-    const hh = timeComponents[0] || "00";
-    const mm = timeComponents[1] || "00";
+    const [hh = "00", mm = "00"] = timePart.split(":");
     formatted = `${datePart}T${hh}:${mm}`;
   }
+
   return formatted;
 };
 
 // Format date for API submission
 export const formatDateTimeForSubmit = (
-  dateStr: string | undefined,
+  dateStr?: string,
 ): string | undefined => {
   if (!dateStr) return undefined;
+
   let formatted = dateStr.replace("T", " ");
   const parts = formatted.split(" ");
+
   if (parts.length >= 2) {
     const timePart = parts[1];
-    if (timePart && timePart.includes(":")) {
-      const timeComponents = timePart.split(":");
-      if (timeComponents.length === 2) {
-        parts[1] = timePart + ":00";
-        formatted = parts.join(" ");
-      }
+    if (timePart && timePart.split(":").length === 2) {
+      parts[1] = timePart + ":00";
+      formatted = parts.join(" ");
     }
   }
+
   return formatted;
 };
 
-// Calculate number of days - Fixed to handle undefined serviceType
+// Calculate days
 export const calculateDays = (
   serviceType: string | undefined,
   pickupDateTime: string,
-  dropDateTime: string | undefined,
+  dropDateTime?: string,
 ): number => {
   if (serviceType === "Pick & Drop") return 2;
 
   if (pickupDateTime && dropDateTime) {
     const pickup = new Date(pickupDateTime.split("T")[0]);
     const drop = new Date(dropDateTime.split("T")[0]);
+
     const diffDays =
       (drop.getTime() - pickup.getTime()) / (1000 * 60 * 60 * 24);
+
     return diffDays + 1 > 0 ? diffDays + 1 : 1;
   }
+
   return 1;
 };
 
-// Calculate total baggage
+// Total baggage
 export const calculateTotalBaggage = (
-  small: number = 0,
-  medium: number = 0,
-  large: number = 0,
-  airport: number = 0,
-): number => {
-  return small + medium + large + airport;
-};
+  small = 0,
+  medium = 0,
+  large = 0,
+  airport = 0,
+): number => small + medium + large + airport;
 
+// Total vehicles
 export const calculateTotalVehicles = (
   vehicle1: string,
-  vehicle1Qty: number = 0,
+  vehicle1Qty = 0,
   vehicle2: string,
-  vehicle2Qty: number = 0,
+  vehicle2Qty = 0,
   vehicle3: string,
-  vehicle3Qty: number = 0,
+  vehicle3Qty = 0,
 ): string => {
   const vehicles: string[] = [];
 
-  if (vehicle1 && vehicle1Qty > 0) {
+  if (vehicle1 && vehicle1Qty > 0)
     vehicles.push(`${vehicle1} x ${vehicle1Qty}`);
-  }
-  if (vehicle2 && vehicle2Qty > 0) {
+  if (vehicle2 && vehicle2Qty > 0)
     vehicles.push(`${vehicle2} x ${vehicle2Qty}`);
-  }
-  if (vehicle3 && vehicle3Qty > 0) {
+  if (vehicle3 && vehicle3Qty > 0)
     vehicles.push(`${vehicle3} x ${vehicle3Qty}`);
-  }
 
   return vehicles.join(", ");
 };
 
-// Prepare payload for API
+// Prepare payload
 export const prepareLeadPayload = (
   data: LeadFormData,
   formData: any,
@@ -106,11 +105,11 @@ export const prepareLeadPayload = (
   alternateCountryCode: string,
 ) => {
   return {
-    enquiryTime: data.date ? `${data.date}:00` : new Date().toISOString(),
-    source: data.source,
-    status: data.status,
-    telecaller: data.telesales || "Default",
-    customerName: formData.name,
+    // Customer
+    customer_id: (data as any).customer_id,
+    firstName: formData.firstName,
+    middleName: formData.middleName,
+    lastName: formData.lastName,
     customerPhone: `+91 ${formData.phone}`,
     alternatePhone: formData.alternatePhone
       ? `${alternateCountryCode} ${formData.alternatePhone}`
@@ -120,6 +119,15 @@ export const prepareLeadPayload = (
     customerType: data.customerType,
     customerCategoryType: data.customerCategoryType || "",
     countryName: data.countryName,
+    customerCity: data.customerCity || "",
+    customerState: data.customerState || "",
+    customerAddress: data.customerAddress || "",
+
+    // Lead
+    enquiryTime: data.date ? `${data.date}:00` : new Date().toISOString(),
+    source: data.source,
+    status: data.status,
+    telecaller: data.telesales || "Default",
     city: data.city || "",
     serviceType: data.serviceType,
     occasion: data.occasion || "",
@@ -156,16 +164,23 @@ export const prepareLeadPayload = (
   };
 };
 
-// Map initial data to form
+// Map initial data
 export const mapInitialDataToForm = (initialData: LeadRecord) => {
   const mainPhone = parsePhone(initialData.customerPhone || "");
   const altPhone = parsePhone(initialData.alternatePhone || "");
 
-  // Split customer name into first, middle, last
-  const nameParts = (initialData.customerName || "").trim().split(" ");
-  const firstName = nameParts[0] || "";
-  const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
-  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+  // ✅ Direct fields (BEST)
+  let firstName = initialData.firstName || "";
+  let middleName = initialData.middleName || "";
+  let lastName = initialData.lastName || "";
+
+  // 🔥 Fallback (agar backend se nahi aaya)
+  if (!firstName && initialData.fullName) {
+    const parts = initialData.fullName.trim().split(" ");
+    firstName = parts[0] || "";
+    middleName = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
+    lastName = parts.length > 1 ? parts[parts.length - 1] : "";
+  }
 
   return {
     formData: {
@@ -179,19 +194,30 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
         initialData.customerType === "Personal"
           ? "C"
           : initialData.companyName || "",
-      // Legacy fields for salesEditLeadForm
-      name: initialData.customerName || "",
+      name: initialData.fullName || "",
     },
     alternateCountryCode: altPhone.code,
     customerCategoryTypeValue: initialData.customerCategoryType || "",
     itineraryList: initialData.itinerary || [],
     setValues: {
+      customer_id:
+        (initialData as any).customer_id ??
+        (initialData as any).customerId ??
+        undefined,
+
       date: initialData.enquiryTime?.slice(0, 16) || "",
       source: initialData.source,
       telesales: initialData.telecaller,
       status: initialData.status,
+      city: initialData.city || "",
+
       customerType: initialData.customerType,
       customerCategoryType: initialData.customerCategoryType || "",
+      countryName: initialData.countryName || initialData.customerCountry || "",
+      customerCity: initialData.customerCity || "",
+      customerState: initialData.customerState || "",
+      customerAddress: initialData.customerAddress || "",
+
       serviceType: initialData.serviceType,
       tripType: initialData.tripType || "",
       occasion: initialData.occasion || "",
@@ -201,11 +227,19 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
       dropAddress: initialData.dropAddress || "",
       pickupcity: (initialData as any).pickupcity || "",
       dropcity: (initialData as any).dropcity || "",
-      passengerTotal: initialData.passengerTotal,
       days: initialData.days,
       km: String(initialData.km),
+
+      passengerTotal: initialData.passengerTotal,
       petsNumber: initialData.petsNumber || 0,
       petsNames: initialData.petsNames || "",
+
+      smallbaggage: initialData.smallBaggage || 0,
+      mediumbaggage: initialData.mediumBaggage || 0,
+      largebaggage: initialData.largeBaggage || 0,
+      airportbaggage: initialData.airportBaggage || 0,
+      totalbaggage: initialData.totalBaggage || 0,
+
       vehicles: initialData.vehicles || "",
       vehicle2: initialData.vehicle2 || "",
       vehicle3: initialData.vehicle3 || "",
@@ -213,21 +247,11 @@ export const mapInitialDataToForm = (initialData: LeadRecord) => {
       vehicle2Quantity: (initialData as any).vehicle2Quantity || 0,
       vehicle3Quantity: (initialData as any).vehicle3Quantity || 0,
       requirementVehicle: initialData.requirementVehicle || "",
-      smallbaggage: initialData.smallBaggage || 0,
-      mediumbaggage: initialData.mediumBaggage || 0,
-      largebaggage: initialData.largeBaggage || 0,
-      airportbaggage: initialData.airportBaggage || 0,
-      totalbaggage: initialData.totalBaggage || 0,
+
       remarks: initialData.remarks || "",
       lost_reason: initialData.lost_reason || "",
       lostReasonDetails: initialData.lostReasonDetails || "",
       followUp: initialData.followUp || "",
-      countryName: initialData.countryName || initialData.customerCountry || "",
-      city: initialData.city || "",
-      itinerary: initialData.itinerary || [],
-      customerCity: initialData.customerCity || "",
-      customerState: initialData.customerState || "",
-      customerAddress: initialData.customerAddress || "",
     },
   };
 };
